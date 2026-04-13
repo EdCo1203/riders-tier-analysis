@@ -311,7 +311,7 @@ with tab2:
         n = len(fallos)
         mensaje = generar_mensaje(rider, fallos, canal_key)
 
-        with st.expander(f"{'🔴' if n >= 3 else '🟡' if n == 2 else '🔵'} {nombre}-{tier} — {n} fallo{'s' if n > 1 else ''}"):
+        with st.expander(f"{'🔴' if n >= 3 else '🟡' if n == 2 else '🔵'} {nombre} - {tier} — {n} fallo{'s' if n > 1 else ''}"):
             st.markdown(f'<div class="msg-box">{mensaje}</div>', unsafe_allow_html=True)
             st.code(mensaje, language=None)
 
