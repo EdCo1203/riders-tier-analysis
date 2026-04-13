@@ -105,7 +105,7 @@ UMBRALES = {
     "UTR":          {"col": "UTR",       "op": "<",  "val": 2.5,  "label": "UTR bajo",            "desc": "Menos de 2.5 pedidos/hora"},
     "Avg WTd":      {"col": "Avg WTd",   "op": ">",  "val": 5.0,  "label": "Tiempo en puerta alto","desc": "Más de 5 min confirmando entrega"},
     "CDT":          {"col": "CDT",       "op": ">",  "val": 20.0, "label": "CDT alto",             "desc": "Más de 20 min de entrega total"},
-    "Reasignacion": {"col": "% RR",      "op": ">",  "val": 10.0, "label": "Reasignaciones altas", "desc": "Más del 10% de pedidos reasignados"},
+    "Reasignacion": {"col": "% RR",      "op": ">",  "val": 0.0, "label": "Reasignaciones altas", "desc": "Se detectan pedidos reasignados de pedidos reasignados"},
     "Cancelacion":  {"col": "% Cancels", "op": ">",  "val": 5.0,  "label": "Cancelaciones altas",  "desc": "Más del 5% de pedidos cancelados"},
 }
 
@@ -113,16 +113,16 @@ UMBRALES = {
 # MENSAJES PERSONALIZADOS
 # ─────────────────────────────────────────
 MENSAJES_FALLO = {
-    "UTR":          "📦 Tu ritmo de pedidos por hora (UTR: {val}) está por debajo del mínimo recomendado de 2.5. Intenta optimizar tus rutas y reducir tiempos muertos entre pedidos.",
+    "UTR":          "📦 Tu ritmo de pedidos por hora (UTR: {val}) está por debajo del mínimo recomendado de 2.5. Trata de mejorar tus tiempos de busqueda y entrega, al mismo tiempo no demores en confirmar el pedido en casa de cliente.",
     "Avg WTd":      "🚪 El tiempo que tardas en confirmar la entrega en puerta ({val} min) es alto. Tener la app lista y confirmar rápido al llegar mejora mucho este indicador.",
     "CDT":          "⏱️ Tu tiempo total de entrega ({val} min) supera los 20 minutos. Revisar las rutas y salir más rápido del punto de recogida puede ayudar.",
-    "Reasignacion": "🔄 Tienes un {val}% de pedidos que se te reasignan a otro rider. Aceptar los pedidos con más rapidez y mantenerte cerca de las zonas de alta demanda reduce esto.",
+    "Reasignacion": "🔄 Tienes un {val}% de pedidos que se te reasignan. Apresurate al buscar los pedidos con más rapidez y mantenerte cerca de las zonas de alta demanda reduce esto.",
     "Cancelacion":  "❌ Tu tasa de cancelación ({val}%) supera el 5%. Cada cancelación penaliza tu score. Si hay un problema recurrente cuéntamelo y lo vemos juntos.",
 }
 
 INTRO_WS  = "Hola {nombre} 👋, he revisado tus métricas de esta semana y quería darte un pequeño feedback para ayudarte a mejorar tu score:"
 INTRO_EMAIL = "Hola {nombre},\n\nHe revisado tus métricas de esta semana y quería compartirte un feedback personalizado para ayudarte a mejorar tu rendimiento:"
-CIERRE_WS   = "\n\nSi tienes cualquier duda o quieres que lo hablemos, escríbeme. ¡Ánimo! 💪"
+CIERRE_WS   = "\n\nSi tienes cualquier duda o quieres que lo hablemos, escríbeme. ¡Ánimo! "
 CIERRE_EMAIL = "\n\nQuedo a tu disposición para cualquier duda o para hablar en persona.\n\nUn saludo,"
 
 # ─────────────────────────────────────────
@@ -175,13 +175,13 @@ def metric_html(label, val, es_malo):
 def to_excel(df):
     buf = io.BytesIO()
     with pd.ExcelWriter(buf, engine="openpyxl") as writer:
-        df.to_excel(writer, index=False, sheet_name="Análisis Tier 4-5")
+        df.to_excel(writer, index=False, sheet_name="Análisis Tiers")
     return buf.getvalue()
 
 # ─────────────────────────────────────────
 # UI PRINCIPAL
 # ─────────────────────────────────────────
-st.markdown("# 🛵 Análisis de Riders — Tier 4 & 5")
+st.markdown("# 🛵 Análisis de Riders — Tier")
 st.markdown("Sube el CSV semanal y obtén el diagnóstico completo con mensajes listos para enviar.")
 
 uploaded = st.file_uploader("Arrastra el CSV aquí", type=["csv"], label_visibility="collapsed")
@@ -200,10 +200,10 @@ if not uploaded:
 # ─────────────────────────────────────────
 df_raw = pd.read_csv(uploaded)
 df_raw = limpiar_porcentaje(df_raw)
-df45 = df_raw[df_raw["Tier"].isin(["Tier 4", "Tier 5"])].copy()
+df45 = df_raw[df_raw["Tier"].isin(["Tier 1","Tier 2","Tier 3","Tier 4", "Tier 5"])].copy()
 
 if df45.empty:
-    st.warning("No se encontraron riders de Tier 4 o Tier 5 en este archivo.")
+    st.warning("No se encontraron riders de Tier 1, Tier 2, Tier 3, Tier 4 o Tier 5 en este archivo.")
     st.stop()
 
 # Evaluar fallos
@@ -240,7 +240,7 @@ tab1, tab2, tab3 = st.tabs(["📋 Riders y diagnóstico", "💬 Mensajes", "📊
 # TAB 1 — DIAGNÓSTICO
 # ══════════════════════════════════════════
 with tab1:
-    filtro_tier = st.multiselect("Filtrar por Tier", ["Tier 4", "Tier 5"], default=["Tier 4", "Tier 5"])
+    filtro_tier = st.multiselect("Filtrar por Tier", ["Tier 1", "Tier 2", "Tier 3","Tier 4", "Tier 5"], default=["Tier 4", "Tier 5"])
     filtro_min_fallos = st.slider("Mínimo de fallos", 0, 5, 0)
 
     riders_filtrados = df45_sorted[
