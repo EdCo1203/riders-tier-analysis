@@ -290,6 +290,9 @@ with tab1:
 # ══════════════════════════════════════════
 with tab2:
     filtro_tier = st.multiselect("Filtrar por Tier", ["Tier 1", "Tier 2", "Tier 3","Tier 4", "Tier 5"], default=["Tier 4", "Tier 5"])
+    riders_filtrados = df45_sorted[
+        (df45_sorted["Tier"].isin(filtro_tier))
+    ]
     canal = st.radio("Canal de contacto", ["WhatsApp", "Email"], horizontal=True)
     canal_key = "ws" if canal == "WhatsApp" else "email"
 
