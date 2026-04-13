@@ -103,8 +103,8 @@ st.markdown("""
 # ─────────────────────────────────────────
 UMBRALES = {
     "UTR":          {"col": "UTR",       "op": "<",  "val": 2.5,  "label": "UTR bajo",            "desc": "Menos de 2.5 pedidos/hora"},
-    "Avg WTd":      {"col": "Avg WTd",   "op": ">",  "val": 5.0,  "label": "Tiempo en puerta alto","desc": "Más de 5 min confirmando entrega"},
-    "CDT":          {"col": "CDT",       "op": ">",  "val": 20.0, "label": "CDT alto",             "desc": "Más de 20 min de entrega total"},
+    "Avg WTd":      {"col": "Avg WTd",   "op": ">",  "val": 5.9,  "label": "Tiempo en puerta alto","desc": "Más de 5 min confirmando entrega"},
+    "CDT":          {"col": "CDT",       "op": ">",  "val": 20.9, "label": "CDT alto",             "desc": "Más de 20 min de entrega total"},
     "Reasignacion": {"col": "% RR",      "op": ">",  "val": 0.0, "label": "Reasignaciones altas", "desc": "Se detectan pedidos reasignados de pedidos reasignados"},
     "Cancelacion":  {"col": "% Cancels", "op": ">",  "val": 5.0,  "label": "Cancelaciones altas",  "desc": "Más del 5% de pedidos cancelados"},
 }
@@ -289,6 +289,7 @@ with tab1:
 # TAB 2 — MENSAJES
 # ══════════════════════════════════════════
 with tab2:
+    filtro_tier = st.multiselect("Filtrar por Tier", ["Tier 1", "Tier 2", "Tier 3","Tier 4", "Tier 5"], default=["Tier 4", "Tier 5"])
     canal = st.radio("Canal de contacto", ["WhatsApp", "Email"], horizontal=True)
     canal_key = "ws" if canal == "WhatsApp" else "email"
 
@@ -302,10 +303,11 @@ with tab2:
             continue
 
         nombre = rider["Nombre"]
+        tier = rider["Tier"]
         n = len(fallos)
         mensaje = generar_mensaje(rider, fallos, canal_key)
 
-        with st.expander(f"{'🔴' if n >= 3 else '🟡' if n == 2 else '🔵'} {nombre} — {n} fallo{'s' if n > 1 else ''}"):
+        with st.expander(f"{'🔴' if n >= 3 else '🟡' if n == 2 else '🔵'} {nombre}-{tier} — {n} fallo{'s' if n > 1 else ''}"):
             st.markdown(f'<div class="msg-box">{mensaje}</div>', unsafe_allow_html=True)
             st.code(mensaje, language=None)
 
