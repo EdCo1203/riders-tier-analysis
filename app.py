@@ -300,7 +300,7 @@ with tab2:
     solo_con_fallos = st.checkbox("Mostrar solo riders con fallos", value=True)
 
     riders_msg = df45_sorted[
-        (df45_sorted["Tier"].isin(filtro_tier)) &
+        (df45_sorted["Tier"].isin(filtro_tier_msj)) &
         (df45_sorted["_n_fallos"] > 0)] if solo_con_fallos else df45_sorted
 
     for _, rider in riders_msg.iterrows():
