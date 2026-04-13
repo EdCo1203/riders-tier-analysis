@@ -240,7 +240,7 @@ tab1, tab2, tab3 = st.tabs(["📋 Riders y diagnóstico", "💬 Mensajes", "📊
 # TAB 1 — DIAGNÓSTICO
 # ══════════════════════════════════════════
 with tab1:
-    filtro_tier = st.multiselect("Filtrar por Tier", ["Tier 1", "Tier 2", "Tier 3","Tier 4", "Tier 5"], default=["Tier 4", "Tier 5"])
+    filtro_tier = st.multiselect("Filtrar por Tier", ["Tier 1", "Tier 2", "Tier 3","Tier 4", "Tier 5"], default=["Tier 4", "Tier 5"], key="filtro_tier_tab1")
     filtro_min_fallos = st.slider("Mínimo de fallos", 0, 5, 0)
 
     riders_filtrados = df45_sorted[
@@ -289,7 +289,7 @@ with tab1:
 # TAB 2 — MENSAJES
 # ══════════════════════════════════════════
 with tab2:
-    filtro_tier_msj = st.multiselect("Filtrar por Tier", ["Tier 1", "Tier 2", "Tier 3","Tier 4", "Tier 5"], default=["Tier 4", "Tier 5"])
+    filtro_tier_msj = st.multiselect("Filtrar por Tier", ["Tier 1", "Tier 2", "Tier 3","Tier 4", "Tier 5"], default=["Tier 4", "Tier 5"], key="filtro_tier_tab2")
     riders_filtrados_msj = df45_sorted[
         (df45_sorted["Tier"].isin(filtro_tier_msj))
     ]
