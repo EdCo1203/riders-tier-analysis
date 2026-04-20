@@ -159,11 +159,13 @@ def saludo_hora():
 
 def generar_mensaje(rider, fallos, canal="ws", periodo="semanal"):
     nombre = rider["Nombre"].split()[0].capitalize()
-    saludo = saludo_hora()  # ← añade esta línea
+    saludo = saludo_hora()
     if canal == "ws":
         intro = INTRO_WS_SEMANAL.format(saludo=saludo, nombre=nombre) if periodo == "semanal" else INTRO_WS_DIARIO.format(saludo=saludo, nombre=nombre)
+        cierre = CIERRE_WS
     else:
         intro = INTRO_EMAIL_SEMANAL.format(saludo=saludo, nombre=nombre) if periodo == "semanal" else INTRO_EMAIL_DIARIO.format(saludo=saludo, nombre=nombre)
+        cierre = CIERRE_EMAIL
 
     lineas = []
     for fallo in fallos:
