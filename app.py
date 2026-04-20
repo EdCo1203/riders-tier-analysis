@@ -116,7 +116,7 @@ MENSAJES_FALLO = {
     "UTR":          "📦 Tu ritmo de pedidos por hora (UTR: {val}) está por debajo del mínimo recomendado de 2.5. Trata de mejorar tus tiempos de busqueda y entrega, al mismo tiempo no demores en confirmar el pedido en casa de cliente.",
     "Avg WTd":      "🚪 El tiempo que tardas en confirmar la entrega en puerta ({val} min) es alto. Tener la app lista y confirmar rápido al llegar mejora mucho este indicador.",
     "CDT":          "⏱️ Tu tiempo total de entrega ({val} min) supera los 20 minutos. Revisar las rutas y salir más rápido del punto de recogida puede ayudar.",
-    "Reasignacion": "🔄 Tienes un {val}% de pedidos que se te reasignan. Apresurate al buscar los pedidos con más rapidez y mantenerte cerca de las zonas de alta demanda reduce esto.",
+    "Reasignacion": "🔄 Tienes un {val}% de pedidos reasignados. Te recordamos que toda reasignacion de no ser justificada esta prohibidad. Ahora si son por no dirigirte al establecimiento apenas te cae la orden debes corregir esta acción de forma inmediata para que no incremente el porcentaje de reasignaciones diarias.",
     "Cancelacion":  "❌ Tu tasa de cancelación ({val}%) supera el 5%. Cada cancelación penaliza tu score. Si hay un problema recurrente cuéntamelo y lo vemos juntos.",
 }
 
