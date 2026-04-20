@@ -116,14 +116,14 @@ MENSAJES_FALLO = {
     "UTR":          "📦 Tu ritmo de pedidos por hora (UTR: {val}) está por debajo del mínimo recomendado de 2.5. Trata de mejorar tus tiempos de busqueda y entrega, al mismo tiempo no demores en confirmar el pedido en casa de cliente.",
     "Avg WTd":      "🚪 El tiempo que tardas en confirmar la entrega en puerta ({val} min) es alto. Tener la app lista y confirmar rápido al llegar mejora mucho este indicador.",
     "CDT":          "⏱️ Tu tiempo total de entrega ({val} min) supera los 20 minutos. Revisar las rutas y salir más rápido del punto de recogida puede ayudar.",
-    "Reasignacion": "🔄 Tienes un {val}% de pedidos reasignados. Te recordamos que toda reasignacion de no ser justificada esta prohibidad. Ahora si son por no dirigirte al establecimiento apenas te cae la orden debes corregir esta acción de forma inmediata para que no incremente el porcentaje de reasignaciones diarias.",
+    "Reasignacion": "🔄 Tienes un {val}% de pedidos reasignados. Te recordamos que toda reasignacion de no ser justificada esta prohibida. Ahora si son por no dirigirte al establecimiento apenas te cae la orden debes corregir esta acción de forma inmediata para que no incremente el porcentaje de reasignaciones diarias.",
     "Cancelacion":  "❌ Tu tasa de cancelación ({val}%) supera el 5%. Cada cancelación penaliza tu score. Si hay un problema recurrente cuéntamelo y lo vemos juntos.",
 }
 
-INTRO_WS_SEMANAL  = "Hola {nombre} 👋, he revisado tus métricas de la semana y quería darte un pequeño feedback para ayudarte a mejorar tu score:"
-INTRO_WS_DIARIO   = "Hola {nombre} 👋, he revisado tus métricas de ayer y quería darte un pequeño feedback para ayudarte a mejorar tu score:"
-INTRO_EMAIL_SEMANAL = "Hola {nombre},\n\nHe revisado tus métricas de la semana pasada y quería compartirte un feedback personalizado para ayudarte a mejorar tu rendimiento:"
-INTRO_EMAIL_DIARIO  = "Hola {nombre},\n\nHe revisado tus métricas de ayer y quería compartirte un feedback personalizado para ayudarte a mejorar tu rendimiento:"
+INTRO_WS_SEMANAL    = "{saludo} {nombre} 👋, he revisado tus métricas de esta semana y quería darte un pequeño feedback para ayudarte a mejorar tu score:"
+INTRO_WS_DIARIO     = "{saludo} {nombre} 👋, he revisado tus métricas de hoy y quería darte un pequeño feedback para ayudarte a mejorar tu score:"
+INTRO_EMAIL_SEMANAL = "{saludo} {nombre},\n\nHe revisado tus métricas de esta semana y quería compartirte un feedback personalizado para ayudarte a mejorar tu rendimiento:"
+INTRO_EMAIL_DIARIO  = "{saludo} {nombre},\n\nHe revisado tus métricas de hoy y quería compartirte un feedback personalizado para ayudarte a mejorar tu rendimiento:"
 CIERRE_WS   = "\n\nSi tienes cualquier duda o quieres que lo hablemos, escríbeme. ¡Ánimo! "
 CIERRE_EMAIL = "\n\nQuedo a tu disposición para cualquier duda o para hablar en persona.\n\nUn saludo,"
 
@@ -147,13 +147,23 @@ def evaluar_rider(rider):
             fallos.append(key)
     return fallos
 
+def saludo_hora():
+    from datetime import datetime
+    hora = datetime.now().hour
+    if 7 <= hora < 12:
+        return "Buenos días"
+    elif 12 <= hora < 19:
+        return "Buenas tardes"
+    else:
+        return "Buenas noches"
+
 def generar_mensaje(rider, fallos, canal="ws", periodo="semanal"):
     nombre = rider["Nombre"].split()[0].capitalize()
+    saludo = saludo_hora()  # ← añade esta línea
     if canal == "ws":
-        intro = INTRO_WS_SEMANAL.format(nombre=nombre) if periodo == "semanal" else INTRO_WS_DIARIO.format(nombre=nombre)
+        intro = INTRO_WS_SEMANAL.format(saludo=saludo, nombre=nombre) if periodo == "semanal" else INTRO_WS_DIARIO.format(saludo=saludo, nombre=nombre)
     else:
-        intro = INTRO_EMAIL_SEMANAL.format(nombre=nombre) if periodo == "semanal" else INTRO_EMAIL_DIARIO.format(nombre=nombre)
-    cierre = CIERRE_WS if canal == "ws" else CIERRE_EMAIL
+        intro = INTRO_EMAIL_SEMANAL.format(saludo=saludo, nombre=nombre) if periodo == "semanal" else INTRO_EMAIL_DIARIO.format(saludo=saludo, nombre=nombre)
 
     lineas = []
     for fallo in fallos:
