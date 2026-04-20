@@ -120,8 +120,10 @@ MENSAJES_FALLO = {
     "Cancelacion":  "❌ Tu tasa de cancelación ({val}%) supera el 5%. Cada cancelación penaliza tu score. Si hay un problema recurrente cuéntamelo y lo vemos juntos.",
 }
 
-INTRO_WS  = "Hola {nombre} 👋, he revisado tus métricas de esta semana y quería darte un pequeño feedback para ayudarte a mejorar tu score:"
-INTRO_EMAIL = "Hola {nombre},\n\nHe revisado tus métricas de esta semana y quería compartirte un feedback personalizado para ayudarte a mejorar tu rendimiento:"
+INTRO_WS_SEMANAL  = "Hola {nombre} 👋, he revisado tus métricas de esta semana y quería darte un pequeño feedback para ayudarte a mejorar tu score:"
+INTRO_WS_DIARIO   = "Hola {nombre} 👋, he revisado tus métricas de hoy y quería darte un pequeño feedback para ayudarte a mejorar tu score:"
+INTRO_EMAIL_SEMANAL = "Hola {nombre},\n\nHe revisado tus métricas de esta semana y quería compartirte un feedback personalizado para ayudarte a mejorar tu rendimiento:"
+INTRO_EMAIL_DIARIO  = "Hola {nombre},\n\nHe revisado tus métricas de hoy y quería compartirte un feedback personalizado para ayudarte a mejorar tu rendimiento:"
 CIERRE_WS   = "\n\nSi tienes cualquier duda o quieres que lo hablemos, escríbeme. ¡Ánimo! "
 CIERRE_EMAIL = "\n\nQuedo a tu disposición para cualquier duda o para hablar en persona.\n\nUn saludo,"
 
@@ -145,9 +147,12 @@ def evaluar_rider(rider):
             fallos.append(key)
     return fallos
 
-def generar_mensaje(rider, fallos, canal="ws"):
+def generar_mensaje(rider, fallos, canal="ws", periodo="semanal"):
     nombre = rider["Nombre"].split()[0].capitalize()
-    intro = INTRO_WS.format(nombre=nombre) if canal == "ws" else INTRO_EMAIL.format(nombre=nombre)
+    if canal == "ws":
+        intro = INTRO_WS_SEMANAL.format(nombre=nombre) if periodo == "semanal" else INTRO_WS_DIARIO.format(nombre=nombre)
+    else:
+        intro = INTRO_EMAIL_SEMANAL.format(nombre=nombre) if periodo == "semanal" else INTRO_EMAIL_DIARIO.format(nombre=nombre)
     cierre = CIERRE_WS if canal == "ws" else CIERRE_EMAIL
 
     lineas = []
@@ -296,7 +301,9 @@ with tab2:
     
     canal = st.radio("Canal de contacto", ["WhatsApp", "Email"], horizontal=True)
     canal_key = "ws" if canal == "WhatsApp" else "email"
-
+    periodo = st.selectbox("Período del informe", ["Semanal", "Diario"])
+    periodo_key = "semanal" if periodo == "Semanal" else "diario"
+    
     solo_con_fallos = st.checkbox("Mostrar solo riders con fallos", value=True)
 
     riders_msg = df45_sorted[
@@ -311,7 +318,7 @@ with tab2:
         nombre = rider["Nombre"]
         tier = rider["Tier"]
         n = len(fallos)
-        mensaje = generar_mensaje(rider, fallos, canal_key)
+        mensaje = generar_mensaje(rider, fallos, canal_key, periodo_key)
 
         with st.expander(f"{'🔴' if n >= 3 else '🟡' if n == 2 else '🔵'} {nombre} - {tier} — {n} fallo{'s' if n > 1 else ''}"):
             st.markdown(f'<div class="msg-box">{mensaje}</div>', unsafe_allow_html=True)
