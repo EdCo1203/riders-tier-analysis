@@ -120,10 +120,10 @@ MENSAJES_FALLO = {
     "Cancelacion":  "❌ Tu tasa de cancelación ({val}%) supera el 5%. Cada cancelación penaliza tu score. Si hay un problema recurrente cuéntamelo y lo vemos juntos.",
 }
 
-INTRO_WS_SEMANAL  = "Hola {nombre} 👋, he revisado tus métricas de esta semana y quería darte un pequeño feedback para ayudarte a mejorar tu score:"
-INTRO_WS_DIARIO   = "Hola {nombre} 👋, he revisado tus métricas de hoy y quería darte un pequeño feedback para ayudarte a mejorar tu score:"
-INTRO_EMAIL_SEMANAL = "Hola {nombre},\n\nHe revisado tus métricas de esta semana y quería compartirte un feedback personalizado para ayudarte a mejorar tu rendimiento:"
-INTRO_EMAIL_DIARIO  = "Hola {nombre},\n\nHe revisado tus métricas de hoy y quería compartirte un feedback personalizado para ayudarte a mejorar tu rendimiento:"
+INTRO_WS_SEMANAL  = "Hola {nombre} 👋, he revisado tus métricas de la semana y quería darte un pequeño feedback para ayudarte a mejorar tu score:"
+INTRO_WS_DIARIO   = "Hola {nombre} 👋, he revisado tus métricas de ayer y quería darte un pequeño feedback para ayudarte a mejorar tu score:"
+INTRO_EMAIL_SEMANAL = "Hola {nombre},\n\nHe revisado tus métricas de la semana pasada y quería compartirte un feedback personalizado para ayudarte a mejorar tu rendimiento:"
+INTRO_EMAIL_DIARIO  = "Hola {nombre},\n\nHe revisado tus métricas de ayer y quería compartirte un feedback personalizado para ayudarte a mejorar tu rendimiento:"
 CIERRE_WS   = "\n\nSi tienes cualquier duda o quieres que lo hablemos, escríbeme. ¡Ánimo! "
 CIERRE_EMAIL = "\n\nQuedo a tu disposición para cualquier duda o para hablar en persona.\n\nUn saludo,"
 
