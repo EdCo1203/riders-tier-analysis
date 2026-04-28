@@ -371,7 +371,7 @@ with tab2:
         canal     = st.radio("Canal", ["WhatsApp","Email"], horizontal=True)
         canal_key = "ws" if canal=="WhatsApp" else "email"
     with col_m2:
-        tipo_msg  = st.radio("Tipo de mensaje", ["Resumen semanal", "Detalle por día"], horizontal=True)
+        tipo_msg  = st.radio("Tipo de mensaje", ["Resumen semanal", "Resumen de ayer", "Detalle por día"], horizontal=True)
 
     solo_f2 = st.checkbox("Solo riders con fallos", value=True, key="sf2")
 
@@ -387,13 +387,14 @@ with tab2:
 
         with st.expander(f"{icono} {nombre} — {tier} — {n} fallo{'s' if n!=1 else ''}"):
 
-            if tipo_msg == "Resumen semanal":
+            if tipo_msg in ("Resumen semanal", "Resumen de ayer"):
                 fallos_dict = {}
                 for f in fallos:
                     col = UMBRALES[f]["col"]
                     val = safe_float(rider.get(col, 0))
                     fallos_dict[f] = {"val": f"{val:.1f}"}
-                mensaje = generar_mensaje(nombre, fallos_dict, canal_key, tipo="semanal")
+                tipo_gen = "semanal" if tipo_msg == "Resumen semanal" else "diario"
+                mensaje = generar_mensaje(nombre, fallos_dict, canal_key, tipo=tipo_gen)
 
             else:  # Detalle por día
                 df_rider_msg = df_filtered[df_filtered["rider_id"] == rid].sort_values("day")
