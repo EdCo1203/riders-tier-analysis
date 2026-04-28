@@ -399,13 +399,21 @@ with tab1:
             fallos_dia = dia["fallos"]
             n_dia = len(fallos_dia)
 
+            utr_v    = float(dia['utr'])    if dia['utr']    is not None else 0.0
+            cdt_v    = float(dia['cdt'])    if dia['cdt']    is not None else 0.0
+            comp_v   = int(dia['completados']) if dia['completados'] is not None else 0
+            esp_v    = int(dia['esperados'])   if dia['esperados']   is not None else 0
+            rr_v     = float(dia['pct_rr'])    if dia['pct_rr']    is not None else 0.0
+            canc_v   = float(dia['pct_cancel'])if dia['pct_cancel'] is not None else 0.0
+            horas_v  = float(dia['horas'])     if dia['horas']     is not None else 0.0
+
             metricas_dia = "".join([
-                metric_html("UTR", f"{dia['utr']:.2f}", "UTR" in fallos_dia),
-                metric_html("CDT", f"{dia['cdt']:.1f}m", "CDT" in fallos_dia),
-                metric_html("Pedidos", f"{int(dia['completados'])}/{int(dia['esperados'])}", "Pedidos" in fallos_dia),
-                metric_html("% RR", f"{dia['pct_rr']:.1f}%", "Reasignacion" in fallos_dia),
-                metric_html("% Cancel", f"{dia['pct_cancel']:.1f}%", "Cancelacion" in fallos_dia),
-                metric_html("Horas", f"{dia['horas']:.1f}h", False),
+                metric_html("UTR",      f"{utr_v:.2f}",          "UTR"          in fallos_dia),
+                metric_html("CDT",      f"{cdt_v:.1f}m",         "CDT"          in fallos_dia),
+                metric_html("Pedidos",  f"{comp_v}/{esp_v}",     "Pedidos"      in fallos_dia),
+                metric_html("% RR",     f"{rr_v:.1f}%",          "Reasignacion" in fallos_dia),
+                metric_html("% Cancel", f"{canc_v:.1f}%",        "Cancelacion"  in fallos_dia),
+                metric_html("Horas",    f"{horas_v:.1f}h",       False),
             ])
 
             badges_dia = "".join([
