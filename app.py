@@ -122,13 +122,13 @@ MENSAJES_FALLO = {
     "Cancelacion":  "❌ Tu tasa de cancelación ({val}%) supera el 5%. Cada cancelación penaliza tu score. Si hay un problema recurrente cuéntamelo y lo vemos juntos.",
 }
 
-INTRO_WS    = "{saludo} {nombre} 👋, he revisado tus métricas de la semana pasada y quería darte un pequeño feedback para ayudarte a mejorar tu score:"
-INTRO_EMAIL = "{saludo} {nombre},\n\nHe revisado tus métricas de la semana pasada y quería compartirte un feedback personalizado para ayudarte a mejorar tu rendimiento:"
+INTRO_WS_SEM    = "{saludo} {nombre} 👋, he revisado tus métricas de la semana pasada y quería darte un pequeño feedback para ayudarte a mejorar tu score:"
+INTRO_WS_DIA    = "{saludo} {nombre} 👋, he revisado tus métricas de ayer y quería darte un pequeño feedback para ayudarte a mejorar tu score:"
+INTRO_EMAIL_SEM = "{saludo} {nombre},\n\nHe revisado tus métricas de la semana pasada y quería compartirte un feedback personalizado para ayudarte a mejorar tu rendimiento:"
+INTRO_EMAIL_DIA = "{saludo} {nombre},\n\nHe revisado tus métricas de ayer y quería compartirte un feedback personalizado para ayudarte a mejorar tu rendimiento:"
 CIERRE_WS    = "\n\nSi tienes cualquier duda o quieres que lo hablemos, escríbeme. ¡Ánimo! 💪"
 CIERRE_EMAIL = "\n\nQuedo a tu disposición para cualquier duda o para hablar en persona.\n\nUn saludo,"
-
-DIAS_ES = {"Monday":"Lunes","Tuesday":"Martes","Wednesday":"Miércoles",
-           "Thursday":"Jueves","Friday":"Viernes","Saturday":"Sábado","Sunday":"Domingo"}
+DIAS_ES = {"Monday":"Lunes","Tuesday":"Martes","Wednesday":"Miércoles","Thursday":"Jueves","Friday":"Viernes","Saturday":"Sábado","Sunday":"Domingo"}
 
 # ─────────────────────────────────────────
 # FUNCIONES
@@ -202,10 +202,13 @@ def metric_html(label, val, es_malo):
     cls = "mal" if es_malo else "ok"
     return f'<span class="metric-item {cls}">{label}: <b>{val}</b></span>'
 
-def generar_mensaje(nombre_completo, fallos_dict, canal="ws"):
+def generar_mensaje(nombre_completo, fallos_dict, canal="ws", tipo="semanal"):
     nombre = nombre_completo.split()[0].capitalize()
     saludo = saludo_hora()
-    intro  = INTRO_WS.format(saludo=saludo, nombre=nombre) if canal=="ws" else INTRO_EMAIL.format(saludo=saludo, nombre=nombre)
+    if tipo == "diario":
+        intro = INTRO_WS_DIA.format(saludo=saludo, nombre=nombre) if canal=="ws" else INTRO_EMAIL_DIA.format(saludo=saludo, nombre=nombre)
+    else:
+        intro = INTRO_WS_SEM.format(saludo=saludo, nombre=nombre) if canal=="ws" else INTRO_EMAIL_SEM.format(saludo=saludo, nombre=nombre)
     cierre = CIERRE_WS if canal=="ws" else CIERRE_EMAIL
     lineas = []
     for fallo, det in fallos_dict.items():
@@ -390,7 +393,7 @@ with tab2:
                     col = UMBRALES[f]["col"]
                     val = safe_float(rider.get(col, 0))
                     fallos_dict[f] = {"val": f"{val:.1f}"}
-                mensaje = generar_mensaje(nombre, fallos_dict, canal_key)
+                mensaje = generar_mensaje(nombre, fallos_dict, canal_key, tipo="semanal")
 
             else:  # Detalle por día
                 df_rider_msg = df_filtered[df_filtered["rider_id"] == rid].sort_values("day")
@@ -414,7 +417,7 @@ with tab2:
                 if bloques:
                     saludo = saludo_hora()
                     nombre_corto = nombre.split()[0].capitalize()
-                    intro  = INTRO_WS.format(saludo=saludo, nombre=nombre_corto) if canal_key=="ws" else INTRO_EMAIL.format(saludo=saludo, nombre=nombre_corto)
+                    intro  = INTRO_WS_DIA.format(saludo=saludo, nombre=nombre_corto) if canal_key=="ws" else INTRO_EMAIL_DIA.format(saludo=saludo, nombre=nombre_corto)
                     cierre = CIERRE_WS if canal_key=="ws" else CIERRE_EMAIL
                     mensaje = intro + "\n\n" + "\n\n".join(bloques) + cierre
                 else:
