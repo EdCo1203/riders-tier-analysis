@@ -124,10 +124,10 @@ MENSAJES_FALLO = {
 
 INTRO_WS_SEM    = "{saludo} {nombre} 👋, he revisado tus métricas de la semana pasada y quería darte un pequeño feedback para ayudarte a mejorar tu score:"
 INTRO_WS_DIA    = "{saludo} {nombre} 👋, he revisado tus métricas de ayer y quería darte un pequeño feedback para ayudarte a mejorar tu score:"
+INTRO_WS_RES    = "{saludo} {nombre} 👋, te envío un resumen de tus métricas. Aquí tienes algunos puntos en los que podemos mejorar juntos:"
 INTRO_EMAIL_SEM = "{saludo} {nombre},\n\nHe revisado tus métricas de la semana pasada y quería compartirte un feedback personalizado para ayudarte a mejorar tu rendimiento:"
 INTRO_EMAIL_DIA = "{saludo} {nombre},\n\nHe revisado tus métricas de ayer y quería compartirte un feedback personalizado para ayudarte a mejorar tu rendimiento:"
-CIERRE_WS    = "\n\nSi tienes cualquier duda o quieres que lo hablemos, escríbeme. ¡Ánimo! 💪"
-CIERRE_EMAIL = "\n\nQuedo a tu disposición para cualquier duda o para hablar en persona.\n\nUn saludo,"
+INTRO_EMAIL_RES = "{saludo} {nombre},\n\nTe envío un resumen de tus métricas. A continuación encontrarás algunos puntos en los que podemos trabajar juntos para mejorar:"
 DIAS_ES = {"Monday":"Lunes","Tuesday":"Martes","Wednesday":"Miércoles","Thursday":"Jueves","Friday":"Viernes","Saturday":"Sábado","Sunday":"Domingo"}
 
 # ─────────────────────────────────────────
@@ -207,6 +207,8 @@ def generar_mensaje(nombre_completo, fallos_dict, canal="ws", tipo="semanal"):
     saludo = saludo_hora()
     if tipo == "diario":
         intro = INTRO_WS_DIA.format(saludo=saludo, nombre=nombre) if canal=="ws" else INTRO_EMAIL_DIA.format(saludo=saludo, nombre=nombre)
+    elif tipo == "resumen":
+        intro = INTRO_WS_RES.format(saludo=saludo, nombre=nombre) if canal=="ws" else INTRO_EMAIL_RES.format(saludo=saludo, nombre=nombre)
     else:
         intro = INTRO_WS_SEM.format(saludo=saludo, nombre=nombre) if canal=="ws" else INTRO_EMAIL_SEM.format(saludo=saludo, nombre=nombre)
     cierre = CIERRE_WS if canal=="ws" else CIERRE_EMAIL
@@ -403,7 +405,7 @@ with tab2:
                     col = UMBRALES[f]["col"]
                     val = safe_float(rider.get(col, 0))
                     fallos_dict[f] = {"val": f"{val:.1f}"}
-                tipo_gen = "semanal" if tipo_msg == "Resumen semanal" else "diario"
+                tipo_gen = "semanal" if tipo_msg == "Resumen semanal" else "diario" if tipo_msg == "Resumen de ayer" else "resumen"
                 mensaje = generar_mensaje(nombre, fallos_dict, canal_key, tipo=tipo_gen)
 
             else:  # Detalle por día
@@ -428,7 +430,7 @@ with tab2:
                 if bloques:
                     saludo = saludo_hora()
                     nombre_corto = nombre.split()[0].capitalize()
-                    intro  = INTRO_WS_DIA.format(saludo=saludo, nombre=nombre_corto) if canal_key=="ws" else INTRO_EMAIL_DIA.format(saludo=saludo, nombre=nombre_corto)
+                    intro  = INTRO_WS_RES.format(saludo=saludo, nombre=nombre_corto) if canal_key=="ws" else INTRO_EMAIL_RES.format(saludo=saludo, nombre=nombre_corto)
                     cierre = CIERRE_WS if canal_key=="ws" else CIERRE_EMAIL
                     mensaje = intro + "\n\n" + "\n\n".join(bloques) + cierre
                 else:
