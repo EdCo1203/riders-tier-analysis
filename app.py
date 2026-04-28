@@ -399,13 +399,20 @@ with tab1:
             fallos_dia = dia["fallos"]
             n_dia = len(fallos_dia)
 
-            utr_v    = float(dia['utr'])    if dia['utr']    is not None else 0.0
-            cdt_v    = float(dia['cdt'])    if dia['cdt']    is not None else 0.0
-            comp_v   = int(dia['completados']) if dia['completados'] is not None else 0
-            esp_v    = int(dia['esperados'])   if dia['esperados']   is not None else 0
-            rr_v     = float(dia['pct_rr'])    if dia['pct_rr']    is not None else 0.0
-            canc_v   = float(dia['pct_cancel'])if dia['pct_cancel'] is not None else 0.0
-            horas_v  = float(dia['horas'])     if dia['horas']     is not None else 0.0
+            def safe_float(v, default=0.0):
+                try:
+                    import math
+                    return default if (v is None or (isinstance(v, float) and math.isnan(v))) else float(v)
+                except:
+                    return default
+
+            utr_v   = safe_float(dia['utr'])
+            cdt_v   = safe_float(dia['cdt'])
+            comp_v  = int(safe_float(dia['completados']))
+            esp_v   = int(safe_float(dia['esperados']))
+            rr_v    = safe_float(dia['pct_rr'])
+            canc_v  = safe_float(dia['pct_cancel'])
+            horas_v = safe_float(dia['horas'])
 
             metricas_dia = "".join([
                 metric_html("UTR",      f"{utr_v:.2f}",          "UTR"          in fallos_dia),
