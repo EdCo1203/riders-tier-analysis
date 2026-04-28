@@ -162,13 +162,13 @@ def evaluar_rider_semanal(rider):
 
 def calcular_metricas_dia(row):
     """Calcula métricas del CSV raw (una fila por día)"""
-    completados = safe_float(row.get("orders_completed_deliveries", 0))
-    cancelados  = safe_float(row.get("orders_cancelled_deliveries", 0))
-    asignados   = safe_float(row.get("total_assigned", 0))
-    reasignados = safe_float(row.get("total_reassigned", 0))
-    horas       = safe_float(row.get("total_worked_hours", 0))
-    utr         = safe_float(row.get("utr", 0))
-    cdt         = safe_float(row.get("avg_courier_delivery_time", 0))
+    completados = safe_float(row.get("raw_completados", 0))
+    cancelados  = safe_float(row.get("raw_cancelados", 0))
+    asignados   = safe_float(row.get("raw_asignados", 0))
+    reasignados = safe_float(row.get("raw_reasignados", 0))
+    horas       = safe_float(row.get("raw_horas", 0))
+    utr         = safe_float(row.get("raw_utr", 0))
+    cdt         = safe_float(row.get("raw_cdt", 0))
     pct_cancel  = (cancelados / asignados * 100) if asignados > 0 else 0
     pct_rr      = (reasignados / asignados * 100) if asignados > 0 else 0
     esperados   = round(horas * 2.5, 1)
@@ -191,8 +191,8 @@ def calcular_metricas_dia(row):
         fallos.append("Cancelacion")
         detalle_fallos["Cancelacion"] = {"val": f"{pct_cancel:.1f}"}
 
-    return {"utr":utr,"cdt":cdt,"pct_cancel":pct_cancel,"pct_rr":pct_rr,
-            "horas":horas,"completados":completados,"esperados":esperados,
+    return {"calc_utr":utr,"calc_cdt":cdt,"calc_pct_cancel":pct_cancel,"calc_pct_rr":pct_rr,
+            "calc_horas":horas,"calc_completados":completados,"calc_esperados":esperados,
             "fallos":fallos,"detalle_fallos":detalle_fallos,"n_fallos":len(fallos)}
 
 def color_card(n):
@@ -255,6 +255,16 @@ df_sem["Rider ID"] = df_sem["Rider ID"].astype(str).str.strip()
 df_raw_data = pd.read_csv(f_raw)
 df_raw_data["rider_id"] = df_raw_data["rider_id"].astype(str).str.strip()
 df_raw_data["day"] = pd.to_datetime(df_raw_data["day"]).dt.strftime("%Y-%m-%d")
+# Renombramos columnas del raw para evitar cualquier colisión con el semanal
+df_raw_data = df_raw_data.rename(columns={
+    "utr": "raw_utr",
+    "avg_courier_delivery_time": "raw_cdt",
+    "total_worked_hours": "raw_horas",
+    "orders_completed_deliveries": "raw_completados",
+    "orders_cancelled_deliveries": "raw_cancelados",
+    "total_assigned": "raw_asignados",
+    "total_reassigned": "raw_reasignados",
+})
 semana_str = f"{df_raw_data['day'].min()} / {df_raw_data['day'].max()}"
 
 # Cruce raw con semanal — renombramos columnas del semanal para evitar colisiones
@@ -484,13 +494,13 @@ with tab3:
 
             fd    = dia["fallos"]
             n_dia = len(fd)
-            utr_v   = safe_float(dia["utr"])
-            cdt_v   = safe_float(dia["cdt"])
-            comp_v  = int(safe_float(dia["completados"]))
-            esp_v   = int(safe_float(dia["esperados"]))
-            rr_v    = safe_float(dia["pct_rr"])
-            canc_v  = safe_float(dia["pct_cancel"])
-            horas_v = safe_float(dia["horas"])
+            utr_v   = safe_float(dia["calc_utr"])
+            cdt_v   = safe_float(dia["calc_cdt"])
+            comp_v  = int(safe_float(dia["calc_completados"]))
+            esp_v   = int(safe_float(dia["calc_esperados"]))
+            rr_v    = safe_float(dia["calc_pct_rr"])
+            canc_v  = safe_float(dia["calc_pct_cancel"])
+            horas_v = safe_float(dia["calc_horas"])
 
             m = "".join([
                 metric_html("UTR",      f"{utr_v:.2f}",      "UTR"          in fd),
@@ -607,13 +617,13 @@ with tab5:
             rows_dia.append({
                 "Rider ID":       rid, "Nombre": nombre, "Tier": tier, "Score": score,
                 "Fecha":          dia["day"],
-                "Horas":          round(safe_float(dia["horas"]),2),
-                "UTR":            round(safe_float(dia["utr"]),3),
-                "CDT (min)":      round(safe_float(dia["cdt"]),1),
-                "Completados":    int(safe_float(dia["completados"])),
-                "Esperados":      int(safe_float(dia["esperados"])),
-                "% Reasignación": round(safe_float(dia["pct_rr"]),2),
-                "% Cancelación":  round(safe_float(dia["pct_cancel"]),2),
+                "Horas":          round(safe_float(dia["calc_horas"]),2),
+                "UTR":            round(safe_float(dia["calc_utr"]),3),
+                "CDT (min)":      round(safe_float(dia["calc_cdt"]),1),
+                "Completados":    int(safe_float(dia["calc_completados"])),
+                "Esperados":      int(safe_float(dia["calc_esperados"])),
+                "% Reasignación": round(safe_float(dia["calc_pct_rr"]),2),
+                "% Cancelación":  round(safe_float(dia["calc_pct_cancel"]),2),
                 "Nº fallos":      dia["n_fallos"],
                 "Fallos":         " | ".join([UMBRALES_RAW[f]["label"] for f in dia["fallos"]]) if dia["fallos"] else "Sin fallos",
             })
