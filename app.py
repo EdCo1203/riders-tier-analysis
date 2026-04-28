@@ -124,10 +124,10 @@ MENSAJES_FALLO = {
 
 INTRO_WS_SEM    = "{saludo} {nombre} 👋, he revisado tus métricas de la semana pasada y quería darte un pequeño feedback para ayudarte a mejorar tu score:"
 INTRO_WS_DIA    = "{saludo} {nombre} 👋, he revisado tus métricas de ayer y quería darte un pequeño feedback para ayudarte a mejorar tu score:"
-INTRO_WS_RES    = "{saludo} {nombre} 👋, te envío un resumen de tus métricas. Aquí tienes algunos puntos en los que podemos mejorar juntos:"
+INTRO_WS_RES    = "{saludo} {nombre} 👋, te envío un resumen de tus métricas. Aquí tienes algunos puntos en los que podemos mejorar:"
 INTRO_EMAIL_SEM = "{saludo} {nombre},\n\nHe revisado tus métricas de la semana pasada y quería compartirte un feedback personalizado para ayudarte a mejorar tu rendimiento:"
 INTRO_EMAIL_DIA = "{saludo} {nombre},\n\nHe revisado tus métricas de ayer y quería compartirte un feedback personalizado para ayudarte a mejorar tu rendimiento:"
-INTRO_EMAIL_RES = "{saludo} {nombre},\n\nTe envío un resumen de tus métricas. A continuación encontrarás algunos puntos en los que podemos trabajar juntos para mejorar:"
+INTRO_EMAIL_RES = "{saludo} {nombre},\n\nTe envío un resumen de tus métricas. A continuación encontrarás algunos puntos en los que podemos trabajar para mejorar:"
 CIERRE_WS    = "\n\nSi tienes cualquier duda o quieres que lo hablemos, escríbeme. ¡Ánimo! 💪"
 CIERRE_EMAIL = "\n\nQuedo a tu disposición para cualquier duda o para hablar en persona.\n\nUn saludo,"
 DIAS_ES = {"Monday":"Lunes","Tuesday":"Martes","Wednesday":"Miércoles","Thursday":"Jueves","Friday":"Viernes","Saturday":"Sábado","Sunday":"Domingo"}
