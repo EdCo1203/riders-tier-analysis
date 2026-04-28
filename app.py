@@ -254,11 +254,17 @@ df_raw_data["rider_id"] = df_raw_data["rider_id"].astype(str).str.strip()
 df_raw_data["day"] = pd.to_datetime(df_raw_data["day"]).dt.strftime("%Y-%m-%d")
 semana_str = f"{df_raw_data['day'].min()} / {df_raw_data['day'].max()}"
 
-# Cruce raw con semanal
-df_merged = df_raw_data.merge(
-    df_sem[["Rider ID","Nombre","Tier","Score","Contrato","Vehículo"]],
-    left_on="rider_id", right_on="Rider ID", how="left"
-)
+# Cruce raw con semanal — renombramos columnas del semanal para evitar colisiones
+df_sem_merge = df_sem[["Rider ID","Nombre","Tier","Score","Contrato","Vehículo"]].copy()
+df_sem_merge = df_sem_merge.rename(columns={
+    "Rider ID": "sem_rider_id",
+    "Nombre":   "sem_nombre",
+    "Tier":     "sem_tier",
+    "Score":    "sem_score",
+    "Contrato": "sem_contrato",
+    "Vehículo": "sem_vehiculo",
+})
+df_merged = df_raw_data.merge(df_sem_merge, left_on="rider_id", right_on="sem_rider_id", how="left")
 
 # ─────────────────────────────────────────
 # FILTRO TIER
@@ -276,7 +282,7 @@ df_sem_f["_n_fallos"] = df_sem_f["_fallos"].apply(len)
 df_sem_f = df_sem_f.sort_values("_n_fallos", ascending=False).reset_index(drop=True)
 
 # CSV raw filtrado
-df_filtered = df_merged[df_merged["Tier"].isin(filtro_tier)].copy() if filtro_tier else df_merged.copy()
+df_filtered = df_merged[df_merged["sem_tier"].isin(filtro_tier)].copy() if filtro_tier else df_merged.copy()
 metricas_raw = df_filtered.apply(calcular_metricas_dia, axis=1, result_type="expand")
 df_filtered = pd.concat([df_filtered.reset_index(drop=True), metricas_raw.reset_index(drop=True)], axis=1)
 riders_orden = (
@@ -351,11 +357,12 @@ with tab1:
         </div>""", unsafe_allow_html=True)
 
 # ══════════════════════════════════════════
-# TAB 2 — MENSAJES (como antes)
+# TAB 2 — MENSAJES
 # ══════════════════════════════════════════
 with tab2:
     canal     = st.radio("Canal", ["WhatsApp","Email"], horizontal=True)
     canal_key = "ws" if canal=="WhatsApp" else "email"
+    tipo_msg  = st.radio("Tipo de mensaje", ["Resumen semanal", "Detalle por día"], horizontal=True)
     solo_f2   = st.checkbox("Solo riders con fallos", value=True, key="sf2")
 
     for _, rider in df_sem_f.iterrows():
@@ -365,17 +372,47 @@ with tab2:
 
         nombre = rider["Nombre"]
         tier   = rider.get("Tier","—")
-
-        fallos_dict = {}
-        for f in fallos:
-            col = UMBRALES[f]["col"]
-            val = safe_float(rider.get(col, 0))
-            fallos_dict[f] = {"val": f"{val:.1f}"}
-
-        mensaje = generar_mensaje(nombre, fallos_dict, canal_key)
-        icono   = "🔴" if n>=3 else "🟡" if n==2 else "🔵"
+        rid    = str(rider["Rider ID"]).strip()
+        icono  = "🔴" if n>=3 else "🟡" if n==2 else "🔵"
 
         with st.expander(f"{icono} {nombre} — {tier} — {n} fallo{'s' if n!=1 else ''}"):
+
+            if tipo_msg == "Resumen semanal":
+                fallos_dict = {}
+                for f in fallos:
+                    col = UMBRALES[f]["col"]
+                    val = safe_float(rider.get(col, 0))
+                    fallos_dict[f] = {"val": f"{val:.1f}"}
+                mensaje = generar_mensaje(nombre, fallos_dict, canal_key)
+
+            else:  # Detalle por día
+                df_rider_msg = df_filtered[df_filtered["rider_id"] == rid].sort_values("day")
+                bloques = []
+                for _, dia in df_rider_msg.iterrows():
+                    if not dia["fallos"]: continue
+                    try:
+                        dt = datetime.strptime(dia["day"], "%Y-%m-%d")
+                        dia_label = f"{DIAS_ES.get(dt.strftime('%A'),'')} {dt.strftime('%d/%m')}"
+                    except:
+                        dia_label = dia["day"]
+                    lineas = []
+                    for fallo in dia["fallos"]:
+                        det = dia["detalle_fallos"].get(fallo, {})
+                        if fallo in MENSAJES_FALLO:
+                            msg = MENSAJES_FALLO[fallo].format(**{k:v for k,v in det.items() if v is not None})
+                            lineas.append(f"  • {msg}")
+                    if lineas:
+                        bloques.append(f"📅 *{dia_label}*\n" + "\n".join(lineas))
+
+                if bloques:
+                    saludo = saludo_hora()
+                    nombre_corto = nombre.split()[0].capitalize()
+                    intro  = INTRO_WS.format(saludo=saludo, nombre=nombre_corto) if canal_key=="ws" else INTRO_EMAIL.format(saludo=saludo, nombre=nombre_corto)
+                    cierre = CIERRE_WS if canal_key=="ws" else CIERRE_EMAIL
+                    mensaje = intro + "\n\n" + "\n\n".join(bloques) + cierre
+                else:
+                    mensaje = "Sin fallos diarios detectados."
+
             st.markdown(f'<div class="msg-box">{mensaje}</div>', unsafe_allow_html=True)
             st.code(mensaje, language=None)
 
@@ -396,11 +433,11 @@ with tab3:
         max_f        = int(df_rider["n_fallos"].max())
         if solo_f3 and total_f == 0: continue
 
-        nombre   = df_rider["Nombre"].iloc[0] if pd.notna(df_rider["Nombre"].iloc[0]) else f"Rider {rid}"
-        tier     = df_rider["Tier"].iloc[0]   if "Tier"  in df_rider.columns else "—"
-        score    = df_rider["Score"].iloc[0]  if "Score" in df_rider.columns else "—"
-        contrato = df_rider["Contrato"].iloc[0] if "Contrato" in df_rider.columns else "—"
-        vehiculo = df_rider["Vehículo"].iloc[0] if "Vehículo" in df_rider.columns else "—"
+        nombre   = df_rider["sem_nombre"].iloc[0] if pd.notna(df_rider["sem_nombre"].iloc[0]) else f"Rider {rid}"
+        tier     = df_rider["sem_tier"].iloc[0]   if "sem_tier"  in df_rider.columns else "—"
+        score    = df_rider["sem_score"].iloc[0]  if "sem_score" in df_rider.columns else "—"
+        contrato = df_rider["sem_contrato"].iloc[0] if "sem_contrato" in df_rider.columns else "—"
+        vehiculo = df_rider["sem_vehiculo"].iloc[0] if "sem_vehiculo" in df_rider.columns else "—"
         clase    = color_card(max_f)
         borde    = "#ef4444" if max_f>=3 else "#f59e0b" if max_f==2 else "#3b82f6" if max_f==1 else "#34d399"
         icono    = "🔴" if max_f>=3 else "🟡" if max_f==2 else "🔵" if max_f==1 else "✅"
@@ -549,9 +586,9 @@ with tab5:
     rows_dia = []
     for rid in riders_orden:
         df_rider = df_filtered[df_filtered["rider_id"]==rid].sort_values("day")
-        nombre   = df_rider["Nombre"].iloc[0] if pd.notna(df_rider["Nombre"].iloc[0]) else f"Rider {rid}"
-        tier     = df_rider["Tier"].iloc[0]   if "Tier"  in df_rider.columns else "—"
-        score    = df_rider["Score"].iloc[0]  if "Score" in df_rider.columns else "—"
+        nombre   = df_rider["sem_nombre"].iloc[0] if pd.notna(df_rider["sem_nombre"].iloc[0]) else f"Rider {rid}"
+        tier     = df_rider["sem_tier"].iloc[0]   if "sem_tier"  in df_rider.columns else "—"
+        score    = df_rider["sem_score"].iloc[0]  if "sem_score" in df_rider.columns else "—"
         for _, dia in df_rider.iterrows():
             rows_dia.append({
                 "Rider ID":       rid, "Nombre": nombre, "Tier": tier, "Score": score,
