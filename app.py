@@ -315,16 +315,19 @@ tab1, tab2, tab3, tab4, tab5 = st.tabs([
 # TAB 1 — DIAGNÓSTICO SEMANAL (como antes)
 # ══════════════════════════════════════════
 with tab1:
+    buscar_d  = st.text_input("🔍 Buscar por Rider ID o nombre", placeholder="Ej: 4067385 o Juan...", key="buscar_d")
     solo_f1 = st.checkbox("Solo riders con fallos", value=True, key="sf1")
     filtro_min = st.slider("Mínimo de fallos", 0, 5, 0)
 
     for _, rider in df_sem_f.iterrows():
         fallos   = rider["_fallos"]
         n        = len(fallos)
+        nombre   = rider["Nombre"]
+        rid_d    = str(rider["Rider ID"]).strip()
+        if buscar_d and buscar_d.strip().lower() not in rid_d.lower() and buscar_d.strip().lower() not in nombre.lower():
+            continue
         if solo_f1 and n == 0: continue
         if n < filtro_min: continue
-
-        nombre   = rider["Nombre"]
         tier     = rider.get("Tier","—")
         score    = rider.get("Score","—")
         contrato = rider.get("Contrato","—")
@@ -360,10 +363,14 @@ with tab1:
 # TAB 2 — MENSAJES
 # ══════════════════════════════════════════
 with tab2:
-    canal     = st.radio("Canal", ["WhatsApp","Email"], horizontal=True)
-    canal_key = "ws" if canal=="WhatsApp" else "email"
-    tipo_msg  = st.radio("Tipo de mensaje", ["Resumen semanal", "Detalle por día"], horizontal=True)
-    solo_f2   = st.checkbox("Solo riders con fallos", value=True, key="sf2")
+    col_m1, col_m2 = st.columns(2)
+    with col_m1:
+        canal     = st.radio("Canal", ["WhatsApp","Email"], horizontal=True)
+        canal_key = "ws" if canal=="WhatsApp" else "email"
+    with col_m2:
+        tipo_msg  = st.radio("Tipo de mensaje", ["Resumen semanal", "Detalle por día"], horizontal=True)
+
+    solo_f2 = st.checkbox("Solo riders con fallos", value=True, key="sf2")
 
     for _, rider in df_sem_f.iterrows():
         fallos = rider["_fallos"]
@@ -426,6 +433,7 @@ with tab3:
     canal_dec     = st.radio("Canal", ["WhatsApp","Email"], horizontal=True, key="canal_dec")
     canal_dec_key = "ws" if canal_dec=="WhatsApp" else "email"
     solo_f3       = st.checkbox("Solo riders con fallos", value=True, key="sf3")
+    buscar_dec    = st.text_input("🔍 Buscar por Rider ID o nombre", placeholder="Ej: 4067385 o Juan...", key="buscar_dec")
 
     for rid in riders_orden:
         df_rider     = df_filtered[df_filtered["rider_id"]==rid].sort_values("day")
@@ -439,6 +447,8 @@ with tab3:
         contrato = df_rider["sem_contrato"].iloc[0] if "sem_contrato" in df_rider.columns else "—"
         vehiculo = df_rider["sem_vehiculo"].iloc[0] if "sem_vehiculo" in df_rider.columns else "—"
         clase    = color_card(max_f)
+        if buscar_dec and buscar_dec.strip().lower() not in rid.lower() and buscar_dec.strip().lower() not in nombre.lower():
+            continue
         borde    = "#ef4444" if max_f>=3 else "#f59e0b" if max_f==2 else "#3b82f6" if max_f==1 else "#34d399"
         icono    = "🔴" if max_f>=3 else "🟡" if max_f==2 else "🔵" if max_f==1 else "✅"
 
