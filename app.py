@@ -236,7 +236,7 @@ st.markdown("# 🛵 Análisis de Riders")
 
 col_up1, col_up2 = st.columns(2)
 with col_up1:
-    st.markdown("**📊 CSV Semanal** *(Nombre, Tier, Score, métricas)*")
+    st.markdown("**📊 CSV Score** *(Nombre, Tier, Score, métricas)*")
     f_semanal = st.file_uploader("CSV semanal", type=["csv"], label_visibility="collapsed", key="semanal")
 with col_up2:
     st.markdown("**📅 CSV Raw Diario** *(métricas por día)*")
