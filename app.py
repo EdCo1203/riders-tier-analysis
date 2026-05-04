@@ -154,7 +154,7 @@ def limpiar_porcentaje(df):
     return df
 
 def evaluar_rider_semanal(rider):
-    """Evalúa fallos del CSV semanal (una fila por rider)"""
+    """Evalúa fallos del CSV Score (una fila por rider)"""
     fallos = []
     for key, u in UMBRALES.items():
         val = safe_float(rider.get(u["col"], None))
