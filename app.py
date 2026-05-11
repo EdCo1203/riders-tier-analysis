@@ -104,7 +104,7 @@ UMBRALES = {
     "CDT":          {"op":">",  "val":20.9, "label":"CDT alto",             "col":"CDT"},
     "Reasignacion": {"op":">",  "val":10.0, "label":"Reasignaciones altas", "col":"% RR"},
     "Cancelacion":  {"op":">",  "val":5.0,  "label":"Cancelaciones altas",  "col":"% Cancels"},
-    "No Show":      {"op":">",  "val":0.0,  "label":"H. No Show"},
+    "No Show":      {"op":">",  "val":0.0,  "label":"H. No Show", "col":"H. No Show"},
 }
 
 UMBRALES_RAW = {
@@ -121,7 +121,7 @@ MENSAJES_FALLO = {
     "CDT":          "⏱️ Tu tiempo total de entrega ({val} min) supera los 20 minutos. Revisar las rutas y salir más rápido del punto de recogida puede ayudar.",
     "Reasignacion": "🔄 Tienes un {val}% de pedidos reasignados. Te recordamos que toda reasignación de no ser justificada está prohibida. Si no te diriges al establecimiento apenas te cae la orden debes corregir esta acción de forma inmediata.",
     "Cancelacion":  "❌ Tu tasa de cancelación ({val}%) supera el 5%. Cada cancelación penaliza tu score. Si hay un problema recurrente cuéntamelo y lo vemos juntos.",
-    "No show":      "⏱️ Esto corresponde al tiempo que permances desconectado teniendo turno, es decir cuado te conectas tarde al turno o directamente no te conectas. Muy atento a esto debido a que las horas no trabajadas se descuentan",
+    "No Show":      "⏱️ Tienes {val}h de No Show esta semana. Esto corresponde al tiempo que permaneces desconectado teniendo turno, ya sea por conectarte tarde o no conectarte. Muy atento a esto ya que las horas no trabajadas se descuentan.",
 }
 
 INTRO_WS_SEM    = "{saludo} {nombre} 👋, he revisado tus métricas de la semana pasada y quería darte un pequeño feedback para ayudarte a mejorar tu score:"
@@ -161,6 +161,8 @@ def evaluar_rider_semanal(rider):
     """Evalúa fallos del CSV Score (una fila por rider)"""
     fallos = []
     for key, u in UMBRALES.items():
+        if "col" not in u:
+            continue
         val = safe_float(rider.get(u["col"], None))
         if (u["op"] == "<" and val < u["val"]) or (u["op"] == ">" and val > u["val"]):
             fallos.append(key)
