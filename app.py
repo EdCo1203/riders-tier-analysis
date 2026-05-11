@@ -335,7 +335,7 @@ tab1, tab2, tab3, tab4, tab5 = st.tabs([
 ])
 
 # ══════════════════════════════════════════
-# TAB 1 — DIAGNÓSTICO SEMANAL (como antes)
+# TAB 1 — DIAGNÓSTICO SEMANAL
 # ══════════════════════════════════════════
 with tab1:
     buscar_d  = st.text_input("🔍 Buscar por Rider ID o nombre", placeholder="Ej: 4067385 o Juan...", key="buscar_d")
@@ -363,13 +363,15 @@ with tab1:
         wtd_v  = safe_float(rider.get("Avg WTd",0))
         rr_v   = safe_float(rider.get("% RR",0))
         canc_v = safe_float(rider.get("% Cancels",0))
+        ns_v   = safe_float(rider.get("H. No Show"))
 
         metricas_html = "".join([
-            metric_html("UTR",      f"{utr_v:.2f}",   "UTR"          in fallos),
-            metric_html("CDT",      f"{cdt_v:.1f}m",  "CDT"          in fallos),
-            metric_html("WTd",      f"{wtd_v:.1f}m",  "Avg WTd"      in fallos),
-            metric_html("% RR",     f"{rr_v:.1f}%",   "Reasignacion" in fallos),
-            metric_html("% Cancel", f"{canc_v:.2f}%", "Cancelacion"  in fallos),
+            metric_html("UTR",          f"{utr_v:.2f}",   "UTR"          in fallos),
+            metric_html("CDT",          f"{cdt_v:.1f}m",  "CDT"          in fallos),
+            metric_html("WTd",          f"{wtd_v:.1f}m",  "Avg WTd"      in fallos),
+            metric_html("% RR",         f"{rr_v:.1f}%",   "Reasignacion" in fallos),
+            metric_html("% Cancel",     f"{canc_v:.2f}%", "Cancelacion"  in fallos),
+            metric_html("H. No Show",   f"{canc_v:.2f}%", "No Show"      in fallos),
         ])
 
         badges = "".join([f'<span class="fallo-badge">{UMBRALES[f]["label"]}</span>' for f in fallos]) if fallos else '<span style="color:#34d399;font-size:.8rem">✅ Sin fallos</span>'
