@@ -32,8 +32,32 @@ def get_sheet():
     except:
         return None
 
+def get_sheet_mensajes():
+    client = get_gsheet_client()
+    if client is None: return None
+    try:
+        sh = client.open(SHEET_NAME)
+        try:
+            return sh.worksheet("Mensajes Enviados")
+        except:
+            ws = sh.add_worksheet(title="Mensajes Enviados", rows=1000, cols=20)
+            ws.append_row(["Fecha Envío","Rider ID","Nombre","Tier","Score","Semana",
+                           "Tipo Mensaje","UTR","Avg WTd","CDT","% RR","% Cancels","% No Show"])
+            return ws
+    except:
+        return None
+
 def cargar_historico():
     ws = get_sheet()
+    if ws is None: return pd.DataFrame()
+    try:
+        data = ws.get_all_records()
+        return pd.DataFrame(data) if data else pd.DataFrame()
+    except:
+        return pd.DataFrame()
+
+def cargar_mensajes_enviados():
+    ws = get_sheet_mensajes()
     if ws is None: return pd.DataFrame()
     try:
         data = ws.get_all_records()
@@ -56,6 +80,23 @@ def guardar_decision(rider_id, nombre, tier, score, semana, fallos_str, decision
         return True
     except Exception as e:
         st.error(f"Error guardando: {e}")
+        return False
+
+def guardar_mensaje_enviado(rider_id, nombre, tier, score, semana, tipo_msg,
+                             utr, wtd, cdt, rr, cancels, no_show):
+    ws = get_sheet_mensajes()
+    if ws is None:
+        st.warning("No se pudo conectar con Google Sheets.")
+        return False
+    try:
+        ws.append_row([
+            datetime.now().strftime("%Y-%m-%d %H:%M"),
+            str(rider_id), nombre, tier, str(score), semana, tipo_msg,
+            utr, wtd, cdt, rr, cancels, no_show
+        ])
+        return True
+    except Exception as e:
+        st.error(f"Error guardando mensaje: {e}")
         return False
 
 # ─────────────────────────────────────────
@@ -104,7 +145,7 @@ UMBRALES = {
     "CDT":          {"op":">",  "val":20.9, "label":"CDT alto",             "col":"CDT"},
     "Reasignacion": {"op":">",  "val":10.0, "label":"Reasignaciones altas", "col":"% RR"},
     "Cancelacion":  {"op":">",  "val":5.0,  "label":"Cancelaciones altas",  "col":"% Cancels"},
-    "No Show":      {"op":">",  "val":0.0,  "label":"% No Show", "col":"% No Show"},
+    "No Show":      {"op":">",  "val":0.0,  "label":"% No Show",            "col":"% No Show"},
 }
 
 UMBRALES_RAW = {
@@ -121,7 +162,7 @@ MENSAJES_FALLO = {
     "CDT":          "⏱️ Tu tiempo total de entrega ({val} min) supera los 20 minutos. Revisar las rutas y salir más rápido del punto de recogida puede ayudar.",
     "Reasignacion": "🔄 Tienes un {val}% de pedidos reasignados. Te recordamos que toda reasignación de no ser justificada está prohibida. Si no te diriges al establecimiento apenas te cae la orden debes corregir esta acción de forma inmediata.",
     "Cancelacion":  "❌ Tu tasa de cancelación ({val}%) supera el 5%. Cada cancelación penaliza tu score. Si hay un problema recurrente cuéntamelo y lo vemos juntos.",
-    "No Show":      "⏱️ Tienes {val}h de No Show esta semana. Esto corresponde al tiempo que permaneces desconectado teniendo turno, ya sea por conectarte tarde o no conectarte. Muy atento a esto ya que las horas no trabajadas se descuentan.",
+    "No Show":      "⏱️ Tienes {val}% de No Show esta semana. Esto corresponde al tiempo que permaneces desconectado teniendo turno, ya sea por conectarte tarde o no conectarte. Muy atento a esto ya que las horas no trabajadas se descuentan.",
 }
 
 INTRO_WS_SEM    = "{saludo} {nombre} 👋, he revisado tus métricas de la semana pasada y quería darte un pequeño feedback para ayudarte a mejorar tu score:"
@@ -158,18 +199,15 @@ def limpiar_porcentaje(df):
     return df
 
 def evaluar_rider_semanal(rider):
-    """Evalúa fallos del CSV Score (una fila por rider)"""
     fallos = []
     for key, u in UMBRALES.items():
-        if "col" not in u:
-            continue
+        if "col" not in u: continue
         val = safe_float(rider.get(u["col"], None))
         if (u["op"] == "<" and val < u["val"]) or (u["op"] == ">" and val > u["val"]):
             fallos.append(key)
     return fallos
 
 def calcular_metricas_dia(row):
-    """Calcula métricas del CSV raw (una fila por día)"""
     completados = safe_float(row.get("raw_completados", 0))
     cancelados  = safe_float(row.get("raw_cancelados", 0))
     asignados   = safe_float(row.get("raw_asignados", 0))
@@ -228,7 +266,6 @@ def generar_mensaje(nombre_completo, fallos_dict, canal="ws", tipo="semanal"):
     return f"{intro}\n\n" + "\n\n".join(lineas) + cierre
 
 def to_excel_multi(sheets_dict):
-    """Genera Excel con múltiples hojas"""
     buf = io.BytesIO()
     with pd.ExcelWriter(buf, engine="openpyxl") as writer:
         for sheet_name, df in sheets_dict.items():
@@ -265,27 +302,17 @@ df_sem["Rider ID"] = df_sem["Rider ID"].astype(str).str.strip()
 df_raw_data = pd.read_csv(f_raw)
 df_raw_data["rider_id"] = df_raw_data["rider_id"].astype(str).str.strip()
 df_raw_data["day"] = pd.to_datetime(df_raw_data["day"]).dt.strftime("%Y-%m-%d")
-# Renombramos columnas del raw para evitar cualquier colisión con el semanal
 df_raw_data = df_raw_data.rename(columns={
-    "utr": "raw_utr",
-    "avg_courier_delivery_time": "raw_cdt",
-    "total_worked_hours": "raw_horas",
-    "orders_completed_deliveries": "raw_completados",
-    "orders_cancelled_deliveries": "raw_cancelados",
-    "total_assigned": "raw_asignados",
+    "utr": "raw_utr", "avg_courier_delivery_time": "raw_cdt",
+    "total_worked_hours": "raw_horas", "orders_completed_deliveries": "raw_completados",
+    "orders_cancelled_deliveries": "raw_cancelados", "total_assigned": "raw_asignados",
     "total_reassigned": "raw_reasignados",
 })
 semana_str = f"{df_raw_data['day'].min()} / {df_raw_data['day'].max()}"
 
-# Cruce raw con semanal — renombramos columnas del semanal para evitar colisiones
-df_sem_merge = df_sem[["Rider ID","Nombre","Tier","Score","Contrato","Vehículo"]].copy()
-df_sem_merge = df_sem_merge.rename(columns={
-    "Rider ID": "sem_rider_id",
-    "Nombre":   "sem_nombre",
-    "Tier":     "sem_tier",
-    "Score":    "sem_score",
-    "Contrato": "sem_contrato",
-    "Vehículo": "sem_vehiculo",
+df_sem_merge = df_sem[["Rider ID","Nombre","Tier","Score","Contrato","Vehículo"]].copy().rename(columns={
+    "Rider ID":"sem_rider_id","Nombre":"sem_nombre","Tier":"sem_tier",
+    "Score":"sem_score","Contrato":"sem_contrato","Vehículo":"sem_vehiculo"
 })
 df_merged = df_raw_data.merge(df_sem_merge, left_on="rider_id", right_on="sem_rider_id", how="left")
 
@@ -298,13 +325,11 @@ filtro_tier = st.multiselect(
     default=[t for t in ["Tier 4","Tier 5"] if t in tiers_disponibles]
 )
 
-# CSV semanal filtrado
 df_sem_f = df_sem[df_sem["Tier"].isin(filtro_tier)].copy() if filtro_tier else df_sem.copy()
 df_sem_f["_fallos"]   = df_sem_f.apply(evaluar_rider_semanal, axis=1)
 df_sem_f["_n_fallos"] = df_sem_f["_fallos"].apply(len)
 df_sem_f = df_sem_f.sort_values("_n_fallos", ascending=False).reset_index(drop=True)
 
-# CSV raw filtrado
 df_filtered = df_merged[df_merged["sem_tier"].isin(filtro_tier)].copy() if filtro_tier else df_merged.copy()
 metricas_raw = df_filtered.apply(calcular_metricas_dia, axis=1, result_type="expand")
 df_filtered = pd.concat([df_filtered.reset_index(drop=True), metricas_raw.reset_index(drop=True)], axis=1)
@@ -335,22 +360,22 @@ tab1, tab2, tab3, tab4, tab5 = st.tabs([
 ])
 
 # ══════════════════════════════════════════
-# TAB 1 — DIAGNÓSTICO SEMANAL
+# TAB 1 — DIAGNÓSTICO
 # ══════════════════════════════════════════
 with tab1:
     buscar_d  = st.text_input("🔍 Buscar por Rider ID o nombre", placeholder="Ej: 4067385 o Juan...", key="buscar_d")
-    solo_f1 = st.checkbox("Solo riders con fallos", value=True, key="sf1")
+    solo_f1   = st.checkbox("Solo riders con fallos", value=True, key="sf1")
     filtro_min = st.slider("Mínimo de fallos", 0, 5, 0)
 
     for _, rider in df_sem_f.iterrows():
-        fallos   = rider["_fallos"]
-        n        = len(fallos)
-        nombre   = rider["Nombre"]
-        rid_d    = str(rider["Rider ID"]).strip()
-        if buscar_d and buscar_d.strip().lower() not in rid_d.lower() and buscar_d.strip().lower() not in nombre.lower():
-            continue
+        fallos = rider["_fallos"]
+        n      = len(fallos)
+        nombre = rider["Nombre"]
+        rid_d  = str(rider["Rider ID"]).strip()
+        if buscar_d and buscar_d.strip().lower() not in rid_d.lower() and buscar_d.strip().lower() not in nombre.lower(): continue
         if solo_f1 and n == 0: continue
         if n < filtro_min: continue
+
         tier     = rider.get("Tier","—")
         score    = rider.get("Score","—")
         contrato = rider.get("Contrato","—")
@@ -366,14 +391,13 @@ with tab1:
         ns_v   = safe_float(rider.get("% No Show",0))
 
         metricas_html = "".join([
-            metric_html("UTR",          f"{utr_v:.2f}",   "UTR"          in fallos),
-            metric_html("CDT",          f"{cdt_v:.1f}m",  "CDT"          in fallos),
-            metric_html("WTd",          f"{wtd_v:.1f}m",  "Avg WTd"      in fallos),
-            metric_html("% RR",         f"{rr_v:.1f}%",   "Reasignacion" in fallos),
-            metric_html("% Cancel",     f"{canc_v:.2f}%", "Cancelacion"  in fallos),
-            metric_html("% No Show",   f"{ns_v:.2f}%", "No Show"      in fallos),
+            metric_html("UTR",       f"{utr_v:.2f}",   "UTR"          in fallos),
+            metric_html("CDT",       f"{cdt_v:.1f}m",  "CDT"          in fallos),
+            metric_html("WTd",       f"{wtd_v:.1f}m",  "Avg WTd"      in fallos),
+            metric_html("% RR",      f"{rr_v:.1f}%",   "Reasignacion" in fallos),
+            metric_html("% Cancel",  f"{canc_v:.2f}%", "Cancelacion"  in fallos),
+            metric_html("% No Show", f"{ns_v:.2f}%",   "No Show"      in fallos),
         ])
-
         badges = "".join([f'<span class="fallo-badge">{UMBRALES[f]["label"]}</span>' for f in fallos]) if fallos else '<span style="color:#34d399;font-size:.8rem">✅ Sin fallos</span>'
 
         st.markdown(f"""
@@ -393,7 +417,7 @@ with tab2:
         canal     = st.radio("Canal", ["WhatsApp","Email"], horizontal=True)
         canal_key = "ws" if canal=="WhatsApp" else "email"
     with col_m2:
-        tipo_msg  = st.radio("Tipo de mensaje", ["Resumen semanal", "Resumen de ayer", "Detalle por día"], horizontal=True)
+        tipo_msg = st.radio("Tipo de mensaje", ["Resumen semanal","Resumen de ayer","Detalle por día"], horizontal=True)
 
     solo_f2 = st.checkbox("Solo riders con fallos", value=True, key="sf2")
 
@@ -408,14 +432,13 @@ with tab2:
         icono  = "🔴" if n>=3 else "🟡" if n==2 else "🔵"
 
         with st.expander(f"{icono} {nombre} — {tier} — {n} fallo{'s' if n!=1 else ''}"):
-
-            if tipo_msg in ("Resumen semanal", "Resumen de ayer"):
+            if tipo_msg in ("Resumen semanal","Resumen de ayer"):
                 fallos_dict = {}
                 for f in fallos:
-                    col = UMBRALES[f]["col"]
-                    val = safe_float(rider.get(col, 0))
+                    col_name = UMBRALES[f]["col"]
+                    val = safe_float(rider.get(col_name, 0))
                     fallos_dict[f] = {"val": f"{val:.1f}"}
-                tipo_gen = "semanal" if tipo_msg == "Resumen semanal" else "diario" if tipo_msg == "Resumen de ayer" else "resumen"
+                tipo_gen = "semanal" if tipo_msg == "Resumen semanal" else "diario"
                 mensaje = generar_mensaje(nombre, fallos_dict, canal_key, tipo=tipo_gen)
 
             else:  # Detalle por día
@@ -449,34 +472,54 @@ with tab2:
             st.markdown(f'<div class="msg-box">{mensaje}</div>', unsafe_allow_html=True)
             st.code(mensaje, language=None)
 
-# ══════════════════════════════════════════
-# SECCIÓN FELICITACIONES dentro de tab2
-# ══════════════════════════════════════════
+            if st.button("✅ Marcar como enviado", key=f"enviado_{rid}_{tipo_msg}", use_container_width=True):
+                ok = guardar_mensaje_enviado(
+                    rid, nombre, tier, rider.get("Score","—"), semana_str, tipo_msg,
+                    safe_float(rider.get("UTR",0)),
+                    safe_float(rider.get("Avg WTd",0)),
+                    safe_float(rider.get("CDT",0)),
+                    safe_float(rider.get("% RR",0)),
+                    safe_float(rider.get("% Cancels",0)),
+                    safe_float(rider.get("% No Show",0)),
+                )
+                if ok: st.success(f"✅ Registrado: {nombre.split()[0]}")
+
+    # ── FELICITACIONES ──
     st.markdown("---")
     st.markdown("### 🎉 Felicitaciones — Tier 1 y 2")
-
-    df_top = df_sem[df_sem["Tier"].isin(["Tier 1", "Tier 2"])].copy()
+    df_top = df_sem[df_sem["Tier"].isin(["Tier 1","Tier 2"])].copy()
 
     if df_top.empty:
         st.info("No hay riders de Tier 1 o Tier 2 en el archivo cargado.")
     else:
         for _, rider in df_top.iterrows():
             nombre_top       = rider["Nombre"]
-            tier_top         = rider.get("Tier", "—")
-            saludo_top       = saludo_hora()
+            tier_top         = rider.get("Tier","—")
+            rid_top          = str(rider["Rider ID"]).strip()
             nombre_corto_top = nombre_top.split()[0].capitalize()
+            saludo_top       = saludo_hora()
 
-            if canal_key == "ws":
-                msg_top = FELICITACION_WS.format(saludo=saludo_top, nombre=nombre_corto_top)
-            else:
-                msg_top = FELICITACION_EMAIL.format(saludo=saludo_top, nombre=nombre_corto_top)
+            msg_top = FELICITACION_WS.format(saludo=saludo_top, nombre=nombre_corto_top) if canal_key=="ws" else FELICITACION_EMAIL.format(saludo=saludo_top, nombre=nombre_corto_top)
 
             with st.expander(f"🌟 {nombre_top} — {tier_top}"):
                 st.markdown(f'<div class="msg-box">{msg_top}</div>', unsafe_allow_html=True)
                 st.code(msg_top, language=None)
 
+                if st.button("✅ Marcar como enviado", key=f"enviado_top_{rid_top}", use_container_width=True):
+                    ok = guardar_mensaje_enviado(
+                        rid_top, nombre_top, tier_top, rider.get("Score","—"),
+                        semana_str, "Felicitación",
+                        safe_float(rider.get("UTR",0)),
+                        safe_float(rider.get("Avg WTd",0)),
+                        safe_float(rider.get("CDT",0)),
+                        safe_float(rider.get("% RR",0)),
+                        safe_float(rider.get("% Cancels",0)),
+                        safe_float(rider.get("% No Show",0)),
+                    )
+                    if ok: st.success(f"✅ Registrado: {nombre_corto_top}")
+
 # ══════════════════════════════════════════
-# TAB 3 — DECISIONES (día a día + botones)
+# TAB 3 — DECISIONES
 # ══════════════════════════════════════════
 with tab3:
     st.markdown("### ✅ Decisiones por rider")
@@ -488,23 +531,23 @@ with tab3:
     buscar_dec    = st.text_input("🔍 Buscar por Rider ID o nombre", placeholder="Ej: 4067385 o Juan...", key="buscar_dec")
 
     for rid in riders_orden:
-        df_rider     = df_filtered[df_filtered["rider_id"]==rid].sort_values("day")
-        total_f      = int(df_rider["n_fallos"].sum())
-        max_f        = int(df_rider["n_fallos"].max())
+        df_rider = df_filtered[df_filtered["rider_id"]==rid].sort_values("day")
+        total_f  = int(df_rider["n_fallos"].sum())
+        max_f    = int(df_rider["n_fallos"].max())
         if solo_f3 and total_f == 0: continue
 
         nombre   = df_rider["sem_nombre"].iloc[0] if pd.notna(df_rider["sem_nombre"].iloc[0]) else f"Rider {rid}"
-        tier     = df_rider["sem_tier"].iloc[0]   if "sem_tier"  in df_rider.columns else "—"
-        score    = df_rider["sem_score"].iloc[0]  if "sem_score" in df_rider.columns else "—"
+        tier     = df_rider["sem_tier"].iloc[0]   if "sem_tier"     in df_rider.columns else "—"
+        score    = df_rider["sem_score"].iloc[0]  if "sem_score"    in df_rider.columns else "—"
         contrato = df_rider["sem_contrato"].iloc[0] if "sem_contrato" in df_rider.columns else "—"
         vehiculo = df_rider["sem_vehiculo"].iloc[0] if "sem_vehiculo" in df_rider.columns else "—"
-        clase    = color_card(max_f)
-        if buscar_dec and buscar_dec.strip().lower() not in rid.lower() and buscar_dec.strip().lower() not in nombre.lower():
-            continue
-        borde    = "#ef4444" if max_f>=3 else "#f59e0b" if max_f==2 else "#3b82f6" if max_f==1 else "#34d399"
-        icono    = "🔴" if max_f>=3 else "🟡" if max_f==2 else "🔵" if max_f==1 else "✅"
 
-        # Cabecera del rider
+        if buscar_dec and buscar_dec.strip().lower() not in rid.lower() and buscar_dec.strip().lower() not in nombre.lower(): continue
+
+        clase = color_card(max_f)
+        borde = "#ef4444" if max_f>=3 else "#f59e0b" if max_f==2 else "#3b82f6" if max_f==1 else "#34d399"
+        icono = "🔴" if max_f>=3 else "🟡" if max_f==2 else "🔵" if max_f==1 else "✅"
+
         fallos_semana_raw = {}
         for _, dia in df_rider.iterrows():
             for fallo in dia["fallos"]:
@@ -521,7 +564,6 @@ with tab3:
             <div style="margin:.3rem 0">{badges}</div>
         </div>""", unsafe_allow_html=True)
 
-        # Días de la semana
         dias_html = ""
         for _, dia in df_rider.iterrows():
             try:
@@ -551,12 +593,10 @@ with tab3:
             b       = "".join([f'<span class="fallo-badge">{UMBRALES_RAW[f]["label"]}</span>' for f in fd]) if fd else '<span style="color:#34d399;font-size:.73rem">✅ OK</span>'
             col_bg  = "#ef444420" if n_dia>=3 else "#f59e0b15" if n_dia==2 else "#3b82f615" if n_dia==1 else "transparent"
             col_brd = "#ef4444"   if n_dia>=3 else "#f59e0b"   if n_dia==2 else "#3b82f6"   if n_dia==1 else "#34d399"
-
             dias_html += f'<div class="day-row" style="border-left:3px solid {col_brd};background:{col_bg}"><div class="day-label">{dia_label}</div><div class="metric-row">{m}</div><div>{b}</div></div>'
 
         st.markdown(dias_html, unsafe_allow_html=True)
 
-        # Notas + botones
         notas = st.text_input("Notas (opcional)", key=f"notas_{rid}", placeholder="Ej: problema de zona, ya contactado...")
         col_c, col_p = st.columns(2)
         with col_c:
@@ -567,20 +607,36 @@ with tab3:
             if st.button("❌ Prescindir", key=f"prescindir_{rid}", use_container_width=True):
                 ok = guardar_decision(rid, nombre, tier, score, semana_str, fallos_str, "Prescindir", notas)
                 if ok: st.warning(f"Guardado: {nombre} → Prescindir")
-
         st.markdown("---")
 
 # ══════════════════════════════════════════
 # TAB 4 — HISTÓRICO
 # ══════════════════════════════════════════
 with tab4:
-    st.markdown("### 📜 Histórico de decisiones")
+    st.markdown("### 📜 Histórico")
     if st.button("🔄 Actualizar"):
         st.cache_resource.clear()
         st.rerun()
 
-    df_hist = cargar_historico()
+    # Mensajes enviados
+    st.markdown("#### 📨 Mensajes enviados")
+    df_msgs = cargar_mensajes_enviados()
+    if df_msgs.empty:
+        st.info("Aún no hay mensajes enviados registrados.")
+    else:
+        st.dataframe(df_msgs, use_container_width=True, hide_index=True)
+        st.download_button(
+            label="⬇️ Descargar mensajes enviados",
+            data=to_excel_multi({"Mensajes Enviados": df_msgs}),
+            file_name="mensajes_enviados.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
 
+    st.markdown("---")
+
+    # Decisiones
+    st.markdown("#### 📋 Decisiones")
+    df_hist = cargar_historico()
     if df_hist.empty:
         st.info("Aún no hay decisiones guardadas.")
     else:
@@ -604,13 +660,12 @@ with tab4:
             n_c = len(df_hist_f[df_hist_f["Decisión"]=="Contactar"])
             n_p = len(df_hist_f[df_hist_f["Decisión"]=="Prescindir"])
             hc1,hc2,hc3 = st.columns(3)
-            with hc1: st.markdown(f'<div class="stat-box"><div class="stat-num">{len(df_hist_f)}</div><div class="stat-label">Total decisiones</div></div>', unsafe_allow_html=True)
+            with hc1: st.markdown(f'<div class="stat-box"><div class="stat-num">{len(df_hist_f)}</div><div class="stat-label">Total</div></div>', unsafe_allow_html=True)
             with hc2: st.markdown(f'<div class="stat-box"><div class="stat-num azul">{n_c}</div><div class="stat-label">Contactar</div></div>', unsafe_allow_html=True)
             with hc3: st.markdown(f'<div class="stat-box"><div class="stat-num rojo">{n_p}</div><div class="stat-label">Prescindir</div></div>', unsafe_allow_html=True)
 
         st.markdown("<br>", unsafe_allow_html=True)
         st.dataframe(df_hist_f, use_container_width=True, hide_index=True)
-
         st.download_button(
             label="⬇️ Descargar histórico Excel",
             data=to_excel_multi({"Histórico decisiones": df_hist_f}),
@@ -619,32 +674,25 @@ with tab4:
         )
 
 # ══════════════════════════════════════════
-# TAB 5 — EXPORTAR (informe + histórico)
+# TAB 5 — EXPORTAR
 # ══════════════════════════════════════════
 with tab5:
     st.markdown("### 📊 Exportar informe completo")
 
-    # Hoja 1: diagnóstico semanal
     rows_sem = []
     for _, rider in df_sem_f.iterrows():
         rows_sem.append({
-            "Rider ID":      rider["Rider ID"],
-            "Nombre":        rider["Nombre"],
-            "Tier":          rider.get("Tier","—"),
-            "Score":         rider.get("Score","—"),
-            "Contrato":      rider.get("Contrato","—"),
-            "Vehículo":      rider.get("Vehículo","—"),
-            "UTR":           safe_float(rider.get("UTR",0)),
-            "CDT":           safe_float(rider.get("CDT",0)),
-            "Avg WTd":       safe_float(rider.get("Avg WTd",0)),
-            "% RR":          safe_float(rider.get("% RR",0)),
-            "% Cancels":     safe_float(rider.get("% Cancels",0)),
-            "Nº fallos":     rider["_n_fallos"],
-            "Fallos":        " | ".join([UMBRALES[f]["label"] for f in rider["_fallos"]]) if rider["_fallos"] else "Sin fallos",
+            "Rider ID": rider["Rider ID"], "Nombre": rider["Nombre"],
+            "Tier": rider.get("Tier","—"), "Score": rider.get("Score","—"),
+            "Contrato": rider.get("Contrato","—"), "Vehículo": rider.get("Vehículo","—"),
+            "UTR": safe_float(rider.get("UTR",0)), "CDT": safe_float(rider.get("CDT",0)),
+            "Avg WTd": safe_float(rider.get("Avg WTd",0)), "% RR": safe_float(rider.get("% RR",0)),
+            "% Cancels": safe_float(rider.get("% Cancels",0)), "% No Show": safe_float(rider.get("% No Show",0)),
+            "Nº fallos": rider["_n_fallos"],
+            "Fallos": " | ".join([UMBRALES[f]["label"] for f in rider["_fallos"]]) if rider["_fallos"] else "Sin fallos",
         })
     df_exp_sem = pd.DataFrame(rows_sem)
 
-    # Hoja 2: detalle día a día
     rows_dia = []
     for rid in riders_orden:
         df_rider = df_filtered[df_filtered["rider_id"]==rid].sort_values("day")
@@ -653,31 +701,24 @@ with tab5:
         score    = df_rider["sem_score"].iloc[0]  if "sem_score" in df_rider.columns else "—"
         for _, dia in df_rider.iterrows():
             rows_dia.append({
-                "Rider ID":       rid, "Nombre": nombre, "Tier": tier, "Score": score,
-                "Fecha":          dia["day"],
-                "Horas":          round(safe_float(dia["calc_horas"]),2),
-                "UTR":            round(safe_float(dia["calc_utr"]),3),
-                "CDT (min)":      round(safe_float(dia["calc_cdt"]),1),
-                "Completados":    int(safe_float(dia["calc_completados"])),
-                "Esperados":      int(safe_float(dia["calc_esperados"])),
-                "% Reasignación": round(safe_float(dia["calc_pct_rr"]),2),
-                "% Cancelación":  round(safe_float(dia["calc_pct_cancel"]),2),
-                "Nº fallos":      dia["n_fallos"],
-                "Fallos":         " | ".join([UMBRALES_RAW[f]["label"] for f in dia["fallos"]]) if dia["fallos"] else "Sin fallos",
+                "Rider ID": rid, "Nombre": nombre, "Tier": tier, "Score": score,
+                "Fecha": dia["day"], "Horas": round(safe_float(dia["calc_horas"]),2),
+                "UTR": round(safe_float(dia["calc_utr"]),3), "CDT (min)": round(safe_float(dia["calc_cdt"]),1),
+                "Completados": int(safe_float(dia["calc_completados"])), "Esperados": int(safe_float(dia["calc_esperados"])),
+                "% Reasignación": round(safe_float(dia["calc_pct_rr"]),2), "% Cancelación": round(safe_float(dia["calc_pct_cancel"]),2),
+                "Nº fallos": dia["n_fallos"],
+                "Fallos": " | ".join([UMBRALES_RAW[f]["label"] for f in dia["fallos"]]) if dia["fallos"] else "Sin fallos",
             })
     df_exp_dia = pd.DataFrame(rows_dia)
 
-    # Hoja 3: histórico decisiones
-    df_hist_exp = cargar_historico()
+    df_hist_exp  = cargar_historico()
+    df_msgs_exp  = cargar_mensajes_enviados()
 
     st.dataframe(df_exp_sem, use_container_width=True, hide_index=True)
 
-    sheets = {
-        "Diagnóstico semanal": df_exp_sem,
-        "Detalle por día":     df_exp_dia,
-    }
-    if not df_hist_exp.empty:
-        sheets["Histórico decisiones"] = df_hist_exp
+    sheets = {"Diagnóstico semanal": df_exp_sem, "Detalle por día": df_exp_dia}
+    if not df_hist_exp.empty:  sheets["Histórico decisiones"] = df_hist_exp
+    if not df_msgs_exp.empty:  sheets["Mensajes Enviados"]    = df_msgs_exp
 
     st.download_button(
         label="⬇️ Descargar Excel completo",
