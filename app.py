@@ -101,16 +101,16 @@ st.markdown("""
 UMBRALES = {
     "UTR":          {"op":"<",  "val":2.5,  "label":"UTR bajo",             "col":"UTR"},
     "Avg WTd":      {"op":">",  "val":5.0,  "label":"Tiempo en puerta alto","col":"Avg WTd"},
-    "CDT":          {"op":">",  "val":20.0, "label":"CDT alto",             "col":"CDT"},
+    "CDT":          {"op":">",  "val":20.9, "label":"CDT alto",             "col":"CDT"},
     "Reasignacion": {"op":">",  "val":10.0, "label":"Reasignaciones altas", "col":"% RR"},
     "Cancelacion":  {"op":">",  "val":5.0,  "label":"Cancelaciones altas",  "col":"% Cancels"},
-    "No Show":      {"op":">",  "val":0.0,  "label":"H. No Show"}
+    "No Show":      {"op":">",  "val":0.0,  "label":"H. No Show"},
 }
 
 UMBRALES_RAW = {
     "UTR":          {"op":"<",  "val":2.5,  "label":"UTR bajo"},
     "Pedidos":      {"op":"<",  "val":None, "label":"Pedidos insuficientes"},
-    "CDT":          {"op":">",  "val":20.0, "label":"CDT alto"},
+    "CDT":          {"op":">",  "val":20.9, "label":"CDT alto"},
     "Reasignacion": {"op":">",  "val":10.0, "label":"Reasignaciones altas"},
     "Cancelacion":  {"op":">",  "val":5.0,  "label":"Cancelaciones altas"},
 }
@@ -121,7 +121,7 @@ MENSAJES_FALLO = {
     "CDT":          "⏱️ Tu tiempo total de entrega ({val} min) supera los 20 minutos. Revisar las rutas y salir más rápido del punto de recogida puede ayudar.",
     "Reasignacion": "🔄 Tienes un {val}% de pedidos reasignados. Te recordamos que toda reasignación de no ser justificada está prohibida. Si no te diriges al establecimiento apenas te cae la orden debes corregir esta acción de forma inmediata.",
     "Cancelacion":  "❌ Tu tasa de cancelación ({val}%) supera el 5%. Cada cancelación penaliza tu score. Si hay un problema recurrente cuéntamelo y lo vemos juntos.",
-    "No show":      "⏱️ Esto corresponde al tiempo que permances desconectado teniendo turno, es decir cuado te conectas tarde al turno o directamente no te conectas. Muy atento a esto debido a que las horas no trabajadas se descuentan"
+    "No show":      "⏱️ Esto corresponde al tiempo que permances desconectado teniendo turno, es decir cuado te conectas tarde al turno o directamente no te conectas. Muy atento a esto debido a que las horas no trabajadas se descuentan",
 }
 
 INTRO_WS_SEM    = "{saludo} {nombre} 👋, he revisado tus métricas de la semana pasada y quería darte un pequeño feedback para ayudarte a mejorar tu score:"
@@ -132,6 +132,8 @@ INTRO_EMAIL_DIA = "{saludo} {nombre},\n\nHe revisado tus métricas de ayer y que
 INTRO_EMAIL_RES = "{saludo} {nombre},\n\nTe envío un resumen de tus métricas. A continuación encontrarás algunos puntos en los que podemos trabajar para mejorar:"
 CIERRE_WS    = "\n\nSi tienes cualquier duda o quieres que lo hablemos, escríbeme. ¡Ánimo! 💪"
 CIERRE_EMAIL = "\n\nQuedo a tu disposición para cualquier duda o para hablar en persona.\n\nUn saludo,"
+FELICITACION_WS    = "{saludo} {nombre} 👋, quería escribirte personalmente para decirte que tu trabajo esta semana ha sido excelente. Se nota el esfuerzo y la dedicación que le pones cada día, y eso marca la diferencia. Gracias por ser parte del equipo y por dar siempre lo mejor de ti. ¡Sigue así! 💪"
+FELICITACION_EMAIL = "{saludo} {nombre},\n\nQuería escribirte personalmente para decirte que tu trabajo esta semana ha sido excelente. Se nota el esfuerzo y la dedicación que le pones cada día, y eso marca la diferencia. Gracias por ser parte del equipo y por dar siempre lo mejor de ti.\n\n¡Sigue así!\n\nUn saludo,"
 DIAS_ES = {"Monday":"Lunes","Tuesday":"Martes","Wednesday":"Miércoles","Thursday":"Jueves","Friday":"Viernes","Saturday":"Sábado","Sunday":"Domingo"}
 
 # ─────────────────────────────────────────
@@ -442,6 +444,32 @@ with tab2:
 
             st.markdown(f'<div class="msg-box">{mensaje}</div>', unsafe_allow_html=True)
             st.code(mensaje, language=None)
+
+# ══════════════════════════════════════════
+# SECCIÓN FELICITACIONES dentro de tab2
+# ══════════════════════════════════════════
+    st.markdown("---")
+    st.markdown("### 🎉 Felicitaciones — Tier 1 y 2")
+
+    df_top = df_sem[df_sem["Tier"].isin(["Tier 1", "Tier 2"])].copy()
+
+    if df_top.empty:
+        st.info("No hay riders de Tier 1 o Tier 2 en el archivo cargado.")
+    else:
+        for _, rider in df_top.iterrows():
+            nombre_top       = rider["Nombre"]
+            tier_top         = rider.get("Tier", "—")
+            saludo_top       = saludo_hora()
+            nombre_corto_top = nombre_top.split()[0].capitalize()
+
+            if canal_key == "ws":
+                msg_top = FELICITACION_WS.format(saludo=saludo_top, nombre=nombre_corto_top)
+            else:
+                msg_top = FELICITACION_EMAIL.format(saludo=saludo_top, nombre=nombre_corto_top)
+
+            with st.expander(f"🌟 {nombre_top} — {tier_top}"):
+                st.markdown(f'<div class="msg-box">{msg_top}</div>', unsafe_allow_html=True)
+                st.code(msg_top, language=None)
 
 # ══════════════════════════════════════════
 # TAB 3 — DECISIONES (día a día + botones)
