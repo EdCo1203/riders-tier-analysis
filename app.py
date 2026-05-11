@@ -104,7 +104,7 @@ UMBRALES = {
     "CDT":          {"op":">",  "val":20.9, "label":"CDT alto",             "col":"CDT"},
     "Reasignacion": {"op":">",  "val":10.0, "label":"Reasignaciones altas", "col":"% RR"},
     "Cancelacion":  {"op":">",  "val":5.0,  "label":"Cancelaciones altas",  "col":"% Cancels"},
-    "No Show":      {"op":">",  "val":0.0,  "label":"H. No Show", "col":"H. No Show"},
+    "No Show":      {"op":">",  "val":0.0,  "label":"% No Show", "col":"% No Show"},
 }
 
 UMBRALES_RAW = {
@@ -363,7 +363,7 @@ with tab1:
         wtd_v  = safe_float(rider.get("Avg WTd",0))
         rr_v   = safe_float(rider.get("% RR",0))
         canc_v = safe_float(rider.get("% Cancels",0))
-        ns_v   = safe_float(rider.get("H. No Show",0))
+        ns_v   = safe_float(rider.get("% No Show",0))
 
         metricas_html = "".join([
             metric_html("UTR",          f"{utr_v:.2f}",   "UTR"          in fallos),
