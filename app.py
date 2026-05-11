@@ -363,7 +363,7 @@ with tab1:
         wtd_v  = safe_float(rider.get("Avg WTd",0))
         rr_v   = safe_float(rider.get("% RR",0))
         canc_v = safe_float(rider.get("% Cancels",0))
-        ns_v   = safe_float(rider.get("H. No Show"))
+        ns_v   = safe_float(rider.get("H. No Show",0))
 
         metricas_html = "".join([
             metric_html("UTR",          f"{utr_v:.2f}",   "UTR"          in fallos),
