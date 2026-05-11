@@ -371,7 +371,7 @@ with tab1:
             metric_html("WTd",          f"{wtd_v:.1f}m",  "Avg WTd"      in fallos),
             metric_html("% RR",         f"{rr_v:.1f}%",   "Reasignacion" in fallos),
             metric_html("% Cancel",     f"{canc_v:.2f}%", "Cancelacion"  in fallos),
-            metric_html("H. No Show",   f"{canc_v:.2f}%", "No Show"      in fallos),
+            metric_html("H. No Show",   f"{ns_v:.2f}%", "No Show"      in fallos),
         ])
 
         badges = "".join([f'<span class="fallo-badge">{UMBRALES[f]["label"]}</span>' for f in fallos]) if fallos else '<span style="color:#34d399;font-size:.8rem">✅ Sin fallos</span>'
