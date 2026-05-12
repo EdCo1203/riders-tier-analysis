@@ -248,6 +248,90 @@ def metric_html(label, val, es_malo):
     cls = "mal" if es_malo else "ok"
     return f'<span class="metric-item {cls}">{label}: <b>{val}</b></span>'
 
+
+def comparar_con_historico(rider_id, rider_row, df_msgs):
+    if df_msgs.empty: return None
+    df_r = df_msgs[df_msgs["Rider ID"].astype(str).str.strip() == str(rider_id).strip()]
+    if df_r.empty: return None
+    ultimo = df_r.sort_values("Fecha Envio").iloc[-1] if "Fecha Envio" in df_r.columns else df_r.sort_values("Fecha Envío").iloc[-1]
+
+    mejoras    = []
+    empeorados = []
+    siguen_mal = []
+
+    for key, u in UMBRALES.items():
+        if "col" not in u: continue
+        val_hist   = safe_float(ultimo.get(u["col"], None))
+        val_actual = safe_float(rider_row.get(u["col"], None))
+        fallaba    = (u["op"]=="<" and val_hist   < u["val"]) or (u["op"]==">" and val_hist   > u["val"])
+        falla_hoy  = (u["op"]=="<" and val_actual < u["val"]) or (u["op"]==">" and val_actual > u["val"])
+
+        if fallaba and not falla_hoy:
+            mejoras.append((key, val_hist, val_actual))
+        elif falla_hoy and fallaba:
+            if (u["op"]=="<" and val_actual < val_hist) or (u["op"]==">" and val_actual > val_hist):
+                empeorados.append((key, val_hist, val_actual))
+            else:
+                siguen_mal.append((key, val_actual))
+        elif falla_hoy and not fallaba:
+            empeorados.append((key, val_hist, val_actual))
+
+    return {"mejoras": mejoras, "empeorados": empeorados, "siguen_mal": siguen_mal, "tiene_historico": True}
+
+MENSAJES_MEJORA = {
+    "UTR":          "📈 Tu UTR ha mejorado, antes estabas en {antes} y ahora en {ahora} pedidos/hora. ¡Buen trabajo!",
+    "Avg WTd":      "📈 Has mejorado tu tiempo en puerta, antes tardabas {antes} min y ahora {ahora} min. ¡Sigue así!",
+    "CDT":          "📈 Tu tiempo de entrega ha mejorado, antes era {antes} min y ahora {ahora} min. ¡Muy bien!",
+    "Reasignacion": "📈 Has reducido tus reasignaciones, antes tenías un {antes}% y ahora un {ahora}%. ¡Buen trabajo!",
+    "Cancelacion":  "📈 Has reducido tus cancelaciones, antes tenías un {antes}% y ahora un {ahora}%. ¡Sigue así!",
+    "No Show":      "📈 Has mejorado tu No Show, antes tenías un {antes}% y ahora un {ahora}%. ¡Muy bien!",
+}
+
+MENSAJES_EMPEORA = {
+    "UTR":          "⚠️ Tu UTR ha empeorado respecto a la semana anterior, antes estabas en {antes} y ahora en {ahora} pedidos/hora. Necesitamos revertir esta tendencia.",
+    "Avg WTd":      "⚠️ Tu tiempo en puerta ha empeorado, antes tardabas {antes} min y ahora {ahora} min. Hay que mejorar esto.",
+    "CDT":          "⚠️ Tu tiempo de entrega ha empeorado, antes era {antes} min y ahora {ahora} min. Presta atención a las rutas.",
+    "Reasignacion": "⚠️ Tus reasignaciones han aumentado, antes tenías un {antes}% y ahora un {ahora}%. Esto no puede continuar.",
+    "Cancelacion":  "⚠️ Tus cancelaciones han aumentado, antes tenías un {antes}% y ahora un {ahora}%. Cada cancelación penaliza tu score.",
+    "No Show":      "⚠️ Tu No Show ha empeorado, antes tenías un {antes}% y ahora un {ahora}%. Muy atento a la conexión en turno.",
+}
+
+def generar_mensaje_comparado(nombre_completo, fallos_dict, canal, comparacion):
+    nombre = nombre_completo.split()[0].capitalize()
+    saludo = saludo_hora()
+    cierre = CIERRE_WS if canal=="ws" else CIERRE_EMAIL
+
+    if comparacion is None or not comparacion.get("tiene_historico"):
+        return generar_mensaje(nombre_completo, fallos_dict, canal, "semanal")
+
+    mejoras    = comparacion["mejoras"]
+    empeorados = comparacion["empeorados"]
+    siguen_mal = comparacion["siguen_mal"]
+
+    if mejoras and not fallos_dict:
+        intro = f"{saludo} {nombre} 👋, ¡excelente semana! Has superado todos los indicadores en los que estabas fallando. Se nota el esfuerzo que estás poniendo. ¡Así se hace! 💪"
+    elif mejoras and empeorados:
+        intro = f"{saludo} {nombre} 👋, esta semana hay avances claros pero también aspectos que han empeorado y necesitamos corregir:"
+    elif mejoras:
+        intro = f"{saludo} {nombre} 👋, se nota que has estado trabajando en mejorar. Hay avances esta semana, aunque aún quedan cosas en las que trabajar:"
+    elif empeorados:
+        intro = f"{saludo} {nombre} 👋, necesito hablarte con claridad: esta semana tus métricas han empeorado respecto a la anterior. Hay que revertir esta tendencia cuanto antes:"
+    else:
+        intro = f"{saludo} {nombre} 👋, seguimos viendo los mismos puntos de mejora que la semana pasada. Necesitamos avanzar en estos aspectos:"
+
+    lineas = []
+    for key, antes, ahora in mejoras:
+        if key in MENSAJES_MEJORA:
+            lineas.append("• " + MENSAJES_MEJORA[key].format(antes=f"{antes:.1f}", ahora=f"{ahora:.1f}"))
+    for key, val in siguen_mal:
+        if key in MENSAJES_FALLO:
+            lineas.append("• " + MENSAJES_FALLO[key].format(val=f"{val:.1f}"))
+    for key, antes, ahora in empeorados:
+        if key in MENSAJES_EMPEORA:
+            lineas.append("• " + MENSAJES_EMPEORA[key].format(antes=f"{antes:.1f}", ahora=f"{ahora:.1f}"))
+
+    return f"{intro}\n\n" + "\n\n".join(lineas) + cierre
+
 def generar_mensaje(nombre_completo, fallos_dict, canal="ws", tipo="semanal"):
     nombre = nombre_completo.split()[0].capitalize()
     saludo = saludo_hora()
@@ -420,6 +504,7 @@ with tab2:
         tipo_msg = st.radio("Tipo de mensaje", ["Resumen semanal","Resumen de ayer","Detalle por día"], horizontal=True)
 
     solo_f2 = st.checkbox("Solo riders con fallos", value=True, key="sf2")
+    df_msgs_hist = cargar_mensajes_enviados()
 
     for _, rider in df_sem_f.iterrows():
         fallos = rider["_fallos"]
@@ -430,16 +515,21 @@ with tab2:
         tier   = rider.get("Tier","—")
         rid    = str(rider["Rider ID"]).strip()
         icono  = "🔴" if n>=3 else "🟡" if n==2 else "🔵"
+        comparacion = comparar_con_historico(rid, rider, df_msgs_hist)
+        tiene_hist  = comparacion is not None and comparacion.get("tiene_historico")
 
-        with st.expander(f"{icono} {nombre} — {tier} — {n} fallo{'s' if n!=1 else ''}"):
+        with st.expander(f"{icono} {nombre} — {tier} — {n} fallo{'s' if n!=1 else ''}{'  🔄 con histórico' if tiene_hist else ''}"):
             if tipo_msg in ("Resumen semanal","Resumen de ayer"):
                 fallos_dict = {}
                 for f in fallos:
                     col_name = UMBRALES[f]["col"]
                     val = safe_float(rider.get(col_name, 0))
                     fallos_dict[f] = {"val": f"{val:.1f}"}
-                tipo_gen = "semanal" if tipo_msg == "Resumen semanal" else "diario"
-                mensaje = generar_mensaje(nombre, fallos_dict, canal_key, tipo=tipo_gen)
+                if tiene_hist:
+                    mensaje = generar_mensaje_comparado(nombre, fallos_dict, canal_key, comparacion)
+                else:
+                    tipo_gen = "semanal" if tipo_msg == "Resumen semanal" else "diario"
+                    mensaje = generar_mensaje(nombre, fallos_dict, canal_key, tipo=tipo_gen)
 
             else:  # Detalle por día
                 df_rider_msg = df_filtered[df_filtered["rider_id"] == rid].sort_values("day")
